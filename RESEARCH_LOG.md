@@ -106,6 +106,16 @@ All times below are UTC unless noted otherwise.
   - geometric remapping intuition
   - good reconstruction of physical wave shape
 - At finite depth these three goals may partially separate, so future work should compare them rather than assume they remain equivalent.
+- A sharper finite-depth hypothesis emerged:
+  - as the dispersion moves away from deep-water `omega ~ sqrt(g k)` toward shallow-water `omega ~ sqrt(g h) k`, three-wave resonance or near-resonance should become more relevant
+  - therefore a finite-depth canonical transform may still remove a large non-resonant part of `H_3`
+  - but the practical success of the representation may then depend on what remains:
+    - resonant three-wave pieces that cannot be removed
+    - near-resonant small-denominator pieces that are formally removable but dynamically delicate
+    - higher-order terms `H_4`, `H_5`, ... that may already matter at intermediate depth
+- This supports a more careful finite-depth research program:
+  - do not ask only whether `H_3` can be transformed away
+  - ask whether removing only the non-resonant part of `H_3` is enough to recover a genuinely improved representation in the `kd > 0.5` regime
 
 ### Possible next research directions
 
@@ -144,3 +154,77 @@ All times below are UTC unless noted otherwise.
   - finite-depth asymptotics
 - Mathematica may be less suitable as a fully automatic engine for the whole Lie-transform derivation.
 - Best practice is likely to split the theory into smaller symbolic subproblems and keep the conceptual derivation explicit in markdown notes.
+
+### Creamer 1989 tutorial implementation added in this session
+
+- Added [Creamer_1989_Tutorial.md](/c:/Research/Some%20Creamer/Creamer_1989_Tutorial.md) as the main stage-1 teaching path for the 1989 deep-water paper.
+- The tutorial is organized around six modules:
+  - Hamiltonian setup and notation
+  - why remove `H_3`
+  - canonical-transform bridge
+  - global generating function to Lie transform
+  - one-dimensional Hilbert-transform geometry
+  - reconstruction to `(4.13)`
+- Added numbered Wolfram Language scripts:
+  - [Mathematica/00_notation_and_assumptions.wl](/c:/Research/Some%20Creamer/Mathematica/00_notation_and_assumptions.wl)
+  - [Mathematica/01_hamiltonian_toy_model.wl](/c:/Research/Some%20Creamer/Mathematica/01_hamiltonian_toy_model.wl)
+  - [Mathematica/02_poisson_and_lie_tools.wl](/c:/Research/Some%20Creamer/Mathematica/02_poisson_and_lie_tools.wl)
+  - [Mathematica/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/03_global_to_lie_bridge.wl)
+  - [Mathematica/04_1d_hilbert_remap.wl](/c:/Research/Some%20Creamer/Mathematica/04_1d_hilbert_remap.wl)
+  - [Mathematica/05_reconstruct_4_13.wl](/c:/Research/Some%20Creamer/Mathematica/05_reconstruct_4_13.wl)
+- The scripts were designed to stay honest about scope:
+  - use toy Hamiltonian and finite-dimensional canonical analogues where appropriate
+  - mark the periodic Fourier reconstruction as a pedagogical adaptation of `(4.14a)`
+  - avoid pretending that Mathematica has already rederived the full fluid kernels automatically
+
+### Teaching constraint clarified in this session
+
+- A new teaching rule was made explicit:
+  - if a derivation uses any simplification, rescaling, single-mode reduction, periodicization, toy replacement, or truncation, the notes and scripts must show the bridge explicitly
+  - the original paper-level expression must appear first
+  - the intermediate reduction or rescaling step must be written out
+  - the reason for making the simplification must be stated
+- This rule was prompted by a confusion around the jump from the field Hamiltonian `(2.10)` to the oscillator-like toy quadratic Hamiltonian.
+- Future tutorial material should therefore avoid presenting simplified formulas without first labeling them as reductions of the original field-theoretic expressions.
+
+## 2026-04-09
+
+### Canonical-variables bridge note added
+
+- Added [Foundations_Canonical_Variables.md](/c:/Research/Some%20Creamer/Foundations_Canonical_Variables.md) as a standalone note to support the Creamer tutorial.
+- Purpose of the note:
+  - explain what canonical variables really are, without assuming comfort with abstract symplectic language
+  - connect ordinary mechanics `(q,p)` to field-theoretic pairs such as `(\eta,\phi_s)`
+  - clarify the role of functional derivatives, Poisson brackets, and canonical transformations
+  - explain in plainer terms what people mean when they say the Hamiltonian form "respects symmetry"
+- This note was motivated by a recurring difficulty:
+  - it is possible to memorize that `(\eta,\phi_s)` are canonical without really understanding what that means
+  - the project now has an explicit bridge document to reduce that gap before going deeper into Lie transforms and normal forms
+
+### Generating-function understanding consolidated and Lie-transform note added
+
+- Recorded a clearer understanding of the generating-functional stage in section 3:
+  - the generating functional first defines the canonical transform implicitly
+  - one must still solve the resulting conditions to obtain useful kernel formulas
+  - the delta function controls wavevector closure only, not resonance by itself
+  - the resonance question is controlled by the frequency combinations that appear in the denominators
+- Added [Lie_Transform_Notes.md](/c:/Research/Some%20Creamer/Lie_Transform_Notes.md) as the next bridge note.
+- Purpose of the new Lie-transform note:
+  - explain Lie transform as a canonical flow generated by `W`
+  - connect that flow picture to the normal-form equation `{H_2,W}=H_3`
+  - prepare the transition from the generating-functional viewpoint to the practical cancellation logic used by Creamer
+
+### Section-3 checkpoint reached
+
+- The following points now seem stable enough to treat as working understanding rather than open confusion:
+  - `H_3` is the right first target because it is the leading nonlinear term and is non-resonant in deep water
+  - `W` must be cubic because `deg{H_2,W} = 2 + deg(W) - 2`, and this bracket has to match the cubic order of `H_3`
+  - generating function and Lie transform are not rival theories; they are two descriptions of the same canonical-transform task
+  - the generating-functional approach is more implicit, while Lie transform is more convenient for order-by-order cancellation
+  - `delta^2(k_1+k_2+k_3)` only enforces wavevector closure
+  - the real resonance question is controlled by the frequency combinations that appear in the denominators of `(3.4)` and `(3.5)`
+  - Lie transform is best viewed as a tool for systematic canonical bookkeeping, not as a mysterious extra physical ingredient
+- Current stopping point:
+  - the next conceptual step is to understand why the Lie-flow equation preserves Poisson structure automatically
+  - after that, the expectation is that the one-dimensional section-4 formulas should read much more naturally
+  - with that in place, the project can move more confidently from the 1D geometric picture back toward the 2D theory

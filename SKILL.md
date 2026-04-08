@@ -106,6 +106,14 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
   - free-wave transport versus bound-wave geometry
 - For finite depth, do not assume the deep-water remapping picture survives unchanged.
 - For intermediate depth, for example `kd > 0.5`, assume by default that higher-order non-resonant structure may matter more than in deep water.
+- For finite depth, distinguish three different issues inside the cubic Hamiltonian:
+  - strictly resonant three-wave terms
+  - near-resonant terms with small frequency denominators
+  - genuinely non-resonant terms
+- Use that distinction when reasoning about finite-depth transforms:
+  - a large non-resonant part of `H_3` may still be removable
+  - but that does not imply that removing `H_3` alone gives a sufficiently good representation
+  - the remaining difficulty may come from resonant or near-resonant cubic structure, or from higher-order Hamiltonian terms
 - Be open to a "best mapping" that is:
   - depth dependent
   - operator based rather than closed form
@@ -116,6 +124,24 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
   - encode asymptotic assumptions
   - simplify one operator identity or expansion at a time
 - Prefer reproducible `.wl` scripts for successful derivations and `.nb` notebooks for exploration.
+- When a conceptual gap appears before a derivation gap, prefer adding a short bridge note in markdown before adding more formulas or scripts.
+- In particular, when the user knows the wave theory but feels they are memorizing Hamiltonian or canonical language:
+  - explain what the canonical pair really is
+  - explain what the Hamiltonian derivatives are doing
+  - explain what Poisson brackets encode
+  - explain what it means for the form to preserve symmetry or structure
+- Do the same for section transitions:
+  - if the user understands the goal but not the method shift, add a bridge note
+  - examples in this project include moving from canonical variables to generating function, and from generating function to Lie transform
+- When the user reaches a stable conceptual checkpoint, record it explicitly:
+  - what is now understood
+  - what single next concept still blocks progress
+  - what later section should become easier once that blocker is removed
+- When introducing any simplification, reduction, rescaling, toy replacement, periodic adaptation, or truncation:
+  - explicitly write the original paper-level object first
+  - explicitly show the intermediate change of variables or modelling step
+  - explicitly state why the simplification is being made
+  - never jump straight to the simplified form without labeling the bridge
 
 ## Next Technical Targets
 
@@ -155,6 +181,7 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
 This folder should evolve toward a small research workspace that supports:
 
 - reading notes
+- staged tutorials
 - formula extraction
 - derivations
 - numerical experiments

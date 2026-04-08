@@ -19,6 +19,9 @@ This repository is organized around three goals:
   - `Creamer et al. (1989)` on the improved linear representation in deep water
   - `Wright and Creamer (1994)` extending the method to finite depth, slowly varying bottoms, and currents
   - `Taylor (2022 lecture notes)` connecting Creamer to spectral tails, cusps, and bound/free-wave interpretation
+- [Creamer_1989_Tutorial.md](/c:/Research/Some%20Creamer/Creamer_1989_Tutorial.md): staged teaching-and-reproduction guide for the 1989 deep-water paper
+- [Foundations_Canonical_Variables.md](/c:/Research/Some%20Creamer/Foundations_Canonical_Variables.md): bridge note on what canonical variables are, why water waves use `(\eta,\phi_s)`, and how Hamiltonian structure should be interpreted
+- [Lie_Transform_Notes.md](/c:/Research/Some%20Creamer/Lie_Transform_Notes.md): bridge note on Lie transforms, canonical flow, and why the `H_3` cancellation is naturally written in that language
 - [Mathematica](/c:/Research/Some%20Creamer/Mathematica): workspace for symbolic derivations, scripts, and notebooks using `wolframscript` and Mathematica
 - [RESEARCH_LOG.md](/c:/Research/Some%20Creamer/RESEARCH_LOG.md): session log and project history
 - [SKILL.md](/c:/Research/Some%20Creamer/SKILL.md): compact working guide summarizing the current understanding and next questions
@@ -39,6 +42,10 @@ This repository is organized around three goals:
 - Eliminating `H_3` does not remove second-order bound harmonics from the physical surface; it moves their origin from the evolution equations into the nonlinear coordinate map.
 - The deep-water case appears special because the canonical transform admits a simple geometric interpretation in terms of Hilbert-transform-related horizontal displacement.
 - The finite-depth case appears less special: the transform still exists, but the clean deep-water geometric picture does not survive in equally simple form.
+- A new finite-depth working distinction is useful:
+  - in deep water, the cubic Hamiltonian is globally non-resonant and can be cleanly removed
+  - in finite depth, especially as the dispersion approaches the shallow-water form `omega ~ sqrt(g h) k`, one should expect more near-resonant or resonant three-wave structure
+  - this still leaves room to remove a large non-resonant part of `H_3`, but it weakens the expectation that handling `H_3` alone will be enough
 
 ## Immediate Research Questions
 
@@ -47,26 +54,49 @@ This repository is organized around three goals:
 - Which parts of observed high-frequency or high-wavenumber tails are genuinely free, and which are bound?
 - Can the transform be used to build improved initial conditions for numerical wave simulations with reduced error-wave content?
 - For intermediate depth, for example `kd > 0.5`, is removal of `H_3` still enough for a practically "best" mapping, or must one also absorb higher-order non-resonant Hamiltonian structure?
+- In finite depth, how should one separate:
+  - strictly resonant three-wave structure
+  - near-resonant small-denominator structure
+  - the still-removable non-resonant remainder of `H_3`
+  and decide which part of the transform should be treated canonically versus left in the dynamics?
 - Is the right finite-depth target still a canonical normal-form transform, or a more directly optimized physical-surface reconstruction map?
 - Why does the deep-water Lie transform admit a simple remapping interpretation while the 1994 finite-depth transform does not?
 - Can one define a depth-dependent "best mapping" by accuracy of crest-trough shape, short-on-long modulation, statistical simplicity, or numerical usefulness?
 
+## Current Learning Status
+
+- The section-2 to section-3 logic of the 1989 paper is now reasonably well internalized:
+  - why `H` is expanded as `H_2 + H_3 + ...`
+  - why `H_3` is the first target
+  - why `W` must be cubic
+  - why `delta` only enforces wavevector closure
+  - why the frequency combinations in `(3.4)-(3.5)` control resonance
+  - why Lie transform should be viewed as a practical bookkeeping tool, not a mysterious extra structure
+- The main conceptual step still worth making explicit is:
+  - why the Lie-flow equation `partial_lambda A = {A,W}` automatically preserves Poisson/canonical structure
+- Expected next payoff:
+  - once that point is clear, the 1-D section-4 results should be much easier to read
+  - after that, it should be natural to return to the 2-D theory with a firmer base
+
 ## Suggested Workflow
 
 1. Read the deep-water 1989 paper first.
-2. Extract the 1-D formulas that connect the transformed variables to the physical surface.
-3. Prototype key algebra in [Mathematica](/c:/Research/Some%20Creamer/Mathematica):
+2. Work through [Creamer_1989_Tutorial.md](/c:/Research/Some%20Creamer/Creamer_1989_Tutorial.md) in module order.
+3. Extract the 1-D formulas that connect the transformed variables to the physical surface.
+4. Prototype key algebra in [Mathematica](/c:/Research/Some%20Creamer/Mathematica):
    - series expansions
+   - toy Hamiltonian normal-form checks
+   - Poisson-bracket and Lie-flow templates
    - operator identities
    - reconstruction formulas
    - finite-depth asymptotics
-4. Separate clearly:
+5. Separate clearly:
    - geometry reconstruction
    - linear time evolution in transformed variables
    - recovery of time derivatives and velocities in physical variables
-5. Then study the 1994 finite-depth extension.
-6. Use the Taylor notes as an interpretation layer for tails, cusps, and bound-wave content.
-7. Treat finite depth as a new regime rather than a small edit of the deep-water picture:
+6. Then study the 1994 finite-depth extension.
+7. Use the Taylor notes as an interpretation layer for tails, cusps, and bound-wave content.
+8. Treat finite depth as a new regime rather than a small edit of the deep-water picture:
    - test where the geometric remapping picture still works
    - test where higher-order Hamiltonian terms become essential
    - compare "best canonical transform" against "best reconstruction map"
@@ -77,6 +107,7 @@ This repository is organized around three goals:
 - Mathematica is expected to be useful for:
   - perturbation series
   - Fourier and operator algebra
+  - toy canonical-transform and Lie-transform checks
   - consistency checks for candidate mappings
   - finite-depth asymptotics
 - It may be less effective as a full automatic Lie-transform engine, so the preferred strategy is to break derivations into smaller symbolic subproblems and keep the theory logic explicit in notes.
