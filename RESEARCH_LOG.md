@@ -262,3 +262,44 @@ All times below are UTC unless noted otherwise.
   - `y` or `chi` as parameter labels
   - `x` as the final Eulerian position
   - the reconstructed physical surface as the result of translating the parameter-point set back into Eulerian coordinates
+
+### Directional MATLAB prototype extended and validated against fixed-`Akp` MF12 data
+
+- Connected the directional MATLAB workflow to the fixed-`Akp` MF12 validation file:
+  - [directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat](/c:/Research/Some%20Creamer/directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat)
+- Confirmed that the updated second-order validation data contains:
+  - `eta20_mf12`, `eta22_mf12`
+  - `phi20_mf12`, `phi22_mf12`
+- Extended the directional MATLAB prototype so the core transform now returns reconstructed `phi_s(x,y)` in addition to `eta_nl(x,y)`.
+- Extended the four-phase separator so it now extracts:
+  - `eta20`, `eta22`, `eta33`
+  - `phi20`, `phi22`
+- Added a dedicated `phi` comparison driver:
+  - [MATLAB/run_directional_creamer_phi_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_phi_case.m)
+- Baseline `phi` result recorded for `Akp=0.12, alpha=8, chi=0, spread=5`:
+  - centerline `phi20` and `phi22` agree well in amplitude with MF12
+  - off-center agreement is also good and of comparable quality to the `eta` workflow
+- Additional `phi` result recorded for `Akp=0.12, alpha=1, chi=0, spread=30`:
+  - centerline Creamer `phi20` / `phi22` are slightly larger than MF12
+  - off-center Creamer `phi20` / `phi22` are slightly smaller than MF12
+  - overall the fields still look quantitatively comparable
+
+### Directional third-order status
+
+- Extended the directional transform to support three lambda-flow models:
+  - `legacy_zeta_only`
+  - `canonical_pair`
+  - `backward_picard_316`
+- Confirmed that for narrow-spreading directional cases, third-order `eta33` can match MF12 very well once enough active modes are retained.
+- Confirmed that for the same cases, reducing active modes to `500` causes `eta33` to collapse by orders of magnitude.
+- This strongly supports the current working judgment:
+  - poor directional high-order agreement is more likely a numerical representation issue than a structural failure of the `H_3`-removal framework itself
+  - in particular, active-mode support appears to be a much stronger limiter than modest changes in lambda-integration style
+
+### GitHub preparation
+
+- Added a top-level [`.gitignore`](/c:/Research/Some%20Creamer/.gitignore) to exclude:
+  - all `.mat` files
+  - common MATLAB temporary files
+  - local scratch files such as `tmp_*`
+- Removed temporary smoke-test files used during MATLAB debugging so the repository is cleaner for GitHub sync.

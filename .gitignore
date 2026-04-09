@@ -1,0 +1,11 @@
+*.mat
+
+# MATLAB temporary / autosave files
+*.asv
+*.m~
+slprj/
+
+# Local scratch files
+tmp_*
+
+external/

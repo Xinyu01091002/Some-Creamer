@@ -24,6 +24,7 @@ This repository is organized around three goals:
 - [Lie_Transform_Notes.md](/c:/Research/Some%20Creamer/Lie_Transform_Notes.md): bridge note on Lie transforms, canonical flow, and why the `H_3` cancellation is naturally written in that language
 - [Practical_1D_Creamer_Form.md](/c:/Research/Some%20Creamer/Practical_1D_Creamer_Form.md): practical reading of the deep-water 1D transform as a Hilbert-transform-driven horizontal remapping plus reconstruction algorithm
 - [Mathematica](/c:/Research/Some%20Creamer/Mathematica): workspace for symbolic derivations, scripts, and notebooks using `wolframscript` and Mathematica
+- [MATLAB](/c:/Research/Some%20Creamer/MATLAB): numerical prototype workspace for directional Creamer reconstruction and MF12 comparison plots
 - [RESEARCH_LOG.md](/c:/Research/Some%20Creamer/RESEARCH_LOG.md): session log and project history
 - [SKILL.md](/c:/Research/Some%20Creamer/SKILL.md): compact working guide summarizing the current understanding and next questions
 
@@ -41,6 +42,7 @@ This repository is organized around three goals:
   - dynamical nonlinearity in the Hamiltonian
   - geometric nonlinearity in the map back to the physical surface
 - Eliminating `H_3` does not remove second-order bound harmonics from the physical surface; it moves their origin from the evolution equations into the nonlinear coordinate map.
+- In one dimension, the transform can reproduce Stokes-like higher-order structure very well, which strongly suggests that poor directional agreement should be treated first as a numerical-implementation issue rather than as evidence of a structural failure of the `H_3`-removal idea.
 - The deep-water case appears special because the canonical transform admits a simple geometric interpretation in terms of Hilbert-transform-related horizontal displacement.
 - The finite-depth case appears less special: the transform still exists, but the clean deep-water geometric picture does not survive in equally simple form.
 - A new finite-depth working distinction is useful:
@@ -83,6 +85,27 @@ This repository is organized around three goals:
   - it is not the geometric `y`-axis of a two-dimensional horizontal plane
   - this makes it much easier to distinguish the parameter-space remapping from the final Eulerian reconstruction in `x`
 
+## MATLAB Status
+
+- The current directional MATLAB prototype now supports both `eta` and `phi_s` reconstruction from one linear parent surface `eta(x,y)`.
+- The core routine exposes a nonlinear `phi_s` output in addition to `eta_nl`, and the four-phase separator now extracts:
+  - `eta20`, `eta22`, `eta33`
+  - `phi20`, `phi22`
+- The second-order validation workflow is now connected to the fixed-`Akp` MF12 HDF5 `.mat`:
+  - [directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat](/c:/Research/Some%20Creamer/directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat)
+- Current plotting drivers include:
+  - [MATLAB/run_directional_creamer_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_case.m) for second-order `eta20/eta22`
+  - [MATLAB/run_directional_creamer_phi_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_phi_case.m) for second-order `phi20/phi22`
+  - [MATLAB/run_directional_creamer_eta33_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_eta33_case.m) for third-order `eta33`
+- The current `lambda`-flow implementation supports three numerical variants:
+  - `canonical_pair`
+  - `legacy_zeta_only`
+  - `backward_picard_316`
+- Present evidence from the directional tests suggests:
+  - second-order `eta` and `phi` agreement with MF12 is already quite good
+  - third-order `eta33` can agree very well in narrow-spreading cases when enough active modes are retained
+  - poor wide-spreading or low-component results are more plausibly numerical-representation issues than structural failures of the transform itself
+
 ## Suggested Workflow
 
 1. Read the deep-water 1989 paper first.
@@ -123,4 +146,4 @@ See [RESEARCH_LOG.md](/c:/Research/Some%20Creamer/RESEARCH_LOG.md) for dated ent
 
 ## GitHub Preparation
 
-This directory was converted into a Git-ready project on 2026-03-12. If a remote repository is created later, the current structure is already suitable for first commit and push.
+This directory was converted into a Git-ready project on 2026-03-12. A top-level `.gitignore` now excludes large MATLAB data files and temporary scratch files, so the repository can be synced to GitHub without uploading the local `.mat` datasets.
