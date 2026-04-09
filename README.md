@@ -22,6 +22,7 @@ This repository is organized around three goals:
 - [Creamer_1989_Tutorial.md](/c:/Research/Some%20Creamer/Creamer_1989_Tutorial.md): staged teaching-and-reproduction guide for the 1989 deep-water paper
 - [Foundations_Canonical_Variables.md](/c:/Research/Some%20Creamer/Foundations_Canonical_Variables.md): bridge note on what canonical variables are, why water waves use `(\eta,\phi_s)`, and how Hamiltonian structure should be interpreted
 - [Lie_Transform_Notes.md](/c:/Research/Some%20Creamer/Lie_Transform_Notes.md): bridge note on Lie transforms, canonical flow, and why the `H_3` cancellation is naturally written in that language
+- [Practical_1D_Creamer_Form.md](/c:/Research/Some%20Creamer/Practical_1D_Creamer_Form.md): practical reading of the deep-water 1D transform as a Hilbert-transform-driven horizontal remapping plus reconstruction algorithm
 - [Mathematica](/c:/Research/Some%20Creamer/Mathematica): workspace for symbolic derivations, scripts, and notebooks using `wolframscript` and Mathematica
 - [RESEARCH_LOG.md](/c:/Research/Some%20Creamer/RESEARCH_LOG.md): session log and project history
 - [SKILL.md](/c:/Research/Some%20Creamer/SKILL.md): compact working guide summarizing the current understanding and next questions
@@ -77,6 +78,10 @@ This repository is organized around three goals:
 - Expected next payoff:
   - once that point is clear, the 1-D section-4 results should be much easier to read
   - after that, it should be natural to return to the 2-D theory with a firmer base
+- The section-4 one-dimensional picture now has one extra stabilizing reminder:
+  - the variable `y` in formulas such as `(4.13)` and `(4.14)` should be read as a parameter-space label / integration variable of the same kind as `chi`
+  - it is not the geometric `y`-axis of a two-dimensional horizontal plane
+  - this makes it much easier to distinguish the parameter-space remapping from the final Eulerian reconstruction in `x`
 
 ## Suggested Workflow
 

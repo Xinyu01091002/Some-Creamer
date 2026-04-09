@@ -228,3 +228,37 @@ All times below are UTC unless noted otherwise.
   - the next conceptual step is to understand why the Lie-flow equation preserves Poisson structure automatically
   - after that, the expectation is that the one-dimensional section-4 formulas should read much more naturally
   - with that in place, the project can move more confidently from the 1D geometric picture back toward the 2D theory
+
+### Section-4 bridge clarified
+
+- Clarified the role of the 1D characteristic coordinate `chi`:
+  - it is the label of the characteristic, i.e. the original parameter-space location of a surface point
+  - the relation `x = chi + lambda ZTilde_0(chi)` should be read as a horizontal point-remapping rule
+- This makes the section-4 geometry much clearer:
+  - section 3 constructs the canonical transform abstractly
+  - section 4 solves that transform explicitly in 1D as a coordinate remapping
+  - equation `(4.13)` is best viewed as the final reconstruction formula that maps the linear transformed variables back onto the physical Eulerian surface
+
+### Practical 1D form recorded
+
+- Added [Practical_1D_Creamer_Form.md](/c:/Research/Some%20Creamer/Practical_1D_Creamer_Form.md).
+- Purpose of the note:
+  - stop re-deriving the 1D picture from the abstract section-3 machinery every time
+  - summarize the practical deep-water 1D transform as:
+    - linear input variables
+    - Hilbert-transform-related horizontal remapping
+    - reconstruction of the physical Eulerian surface
+- Key working takeaway:
+  - the most usable 1D Creamer form is not the abstract `B,D` or `W` data
+  - it is the combination of characteristic remapping and reconstruction formulas `(4.13)` / `(4.14)`
+
+### Section-4 notation clarified further
+
+- Recorded one more reminder that turned out to be practically important while reading the 1D reconstruction formulas:
+  - the `y` that appears in section-4 formulas such as `(4.13)` and `(4.14)` should not be read as a second horizontal direction
+  - in the 1D setting it plays the same conceptual role as `chi`
+  - it is a parameter-space label / reconstruction integration variable for the same family of remapped surface points
+- This clarification helps keep three objects distinct:
+  - `y` or `chi` as parameter labels
+  - `x` as the final Eulerian position
+  - the reconstructed physical surface as the result of translating the parameter-point set back into Eulerian coordinates

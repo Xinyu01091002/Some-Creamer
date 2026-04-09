@@ -233,6 +233,18 @@ Teaching summary:
   - it is still a calculational tool, not a new physical theory
   - it is preferred here because the flow equation and Poisson-bracket counting
     make the cubic cancellation logic transparent
+- why `(3.1)` does not include every cubic combination:
+  - the paper explicitly says it is not the most general cubic form
+  - other combinations would generate structures not present in the original Hamiltonian
+  - the authors keep the most general cubic form odd in `\phi_s`, so that the transformed
+    Hamiltonian remains even in `\phi_s`
+- why the Lie-transform section reuses the same `B,D`:
+  - because, to the first non-trivial order, the Lie-transform relations are the same as
+    those from the global generating functional when `W` is taken to be the negative of
+    the cubic part of `(3.1)`
+  - so the kernels already solved from the global method can be reused at cubic order
+  - the real difference between the two schemes shows up in how higher-order structure is
+    incorporated, not in the existence of a completely different third-order kernel set
 
 ### Mathematica task
 
@@ -343,6 +355,12 @@ The essential interpretation is:
 - `\tilde Z` is approximately the horizontal displacement
 - `x` and `\chi` differ by that displacement
 - a simple profile in the shifted coordinate becomes a nonlinear Eulerian profile after remapping
+- the algebraic reason the 1D case is special is that `1D + k_1+k_2+k_3=0` already forces
+  one `|k|` to equal the sum of the other two, so the general `B,D` kernels collapse
+- this is a consequence of one-dimensional triad closure itself, not a separately imposed
+  ordering of `k_1, k_2, k_3`
+- `\chi` should be read as the characteristic label of a surface point, so section 4 is
+  really solving the coordinate remapping hidden inside the abstract canonical transform
 
 ### Mathematica task
 
@@ -388,6 +406,12 @@ For stage 1, the main conceptual target is:
 
 - understand `(4.13)` and `(4.14)` as reconstruction formulas
 - understand why they naturally create bound harmonics
+- understand `(4.13)` as the final 1D expression of the already-solved coordinate remapping:
+  linear transformed variables are pushed back to the physical surface by the `x <-> chi`
+  characteristic map
+- understand that "reconstruction" here does not mean solving a new dynamics:
+  it means translating the same surface-point set from parameter coordinates back into
+  Eulerian surface coordinates
 
 ### Mathematica task
 

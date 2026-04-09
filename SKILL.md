@@ -137,6 +137,10 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
   - what is now understood
   - what single next concept still blocks progress
   - what later section should become easier once that blocker is removed
+- In section-4 style remapping formulas, be explicit about notation roles:
+  - `x` is usually the final Eulerian position
+  - `chi` and often also `y` are parameter labels / characteristic coordinates / reconstruction integration variables
+  - do not let the user infer that section-4 `y` is automatically a second physical horizontal axis
 - When introducing any simplification, reduction, rescaling, toy replacement, periodic adaptation, or truncation:
   - explicitly write the original paper-level object first
   - explicitly show the intermediate change of variables or modelling step

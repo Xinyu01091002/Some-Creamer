@@ -817,3 +817,224 @@ partial_lambda A = {A,W}
   - `delta` 控制波数闭合
   - 频率组合控制 resonance
   - Lie transform 本身只是一个让这套逐阶消项逻辑变得透明的工具，不是额外神秘的新结构
+
+## 27. 为什么 Lie flow 自动保 Poisson / canonical 结构
+
+这一步是理解 Lie transform 时最后一个真正关键的概念点。
+
+Lie flow 写成
+
+```text
+partial_lambda A = {A,W}
+```
+
+它和普通 Hamiltonian 时间演化
+
+```text
+A_t = {A,H}
+```
+
+在形式上完全一样，只不过：
+
+- 真实时间 `t` 被换成了辅助参数 `lambda`
+- Hamiltonian `H` 被换成了生成元 `W`
+
+所以 Lie flow 本质上就是一种“以 `lambda` 为参数的 Hamiltonian flow”。
+
+而 Hamiltonian flow 的关键性质就是：
+
+- 保 Poisson 结构
+- 因而也保 canonical 结构
+
+为什么？
+
+因为如果 `A(lambda)` 和 `B(lambda)` 都按
+
+```text
+partial_lambda A = {A,W}
+partial_lambda B = {B,W}
+```
+
+演化，那么可以算出
+
+```text
+partial_lambda {A,B}
+= {{A,W},B} + {A,{B,W}}
+```
+
+然后利用 Jacobi 恒等式
+
+```text
+{A,{B,C}} + {B,{C,A}} + {C,{A,B}} = 0
+```
+
+可以把它改写成
+
+```text
+partial_lambda {A,B} = {{A,B},W}
+```
+
+这说明 Poisson bracket 本身也在同一个 flow 下稳定演化，所以 bracket 结构不会坏掉。
+
+而 canonical structure 本质上就是基本 Poisson bracket 的标准形式，例如
+
+```text
+{q_i,p_j} = delta_ij
+{q_i,q_j} = 0
+{p_i,p_j} = 0
+```
+
+既然 flow 保 bracket，这些关系也就会被保留下来。
+
+所以更准确地说：
+
+- 不是“Lie transform 先天神秘地正则”
+- 而是“因为它被定义成 Hamiltonian / Poisson flow，所以它自动就是 canonical 的”
+
+## 28. 关于 section 3，目前已经理顺的另一点
+
+还有一个容易让人疑惑、但现在已经比较清楚的点是：
+
+- 虽然 paper 介绍了 global generating function 和 Lie transform 两条路
+- 但到了 Lie transform 阶段，作者仍然直接使用前面求出的 `B,D`
+
+这不是偷懒，也不是自相矛盾。
+
+原因是：
+
+- 在“第一个非平凡阶”、也就是只做到三次精度并只关心消去 `H_3` 时
+- 两种方法给出的变换关系是等价的
+- 具体地说，只要把 Lie 生成元 `W` 取成 global generating functional 三次部分的负号
+- 那么前面算出的 `B,D` 就可以直接拿来用
+
+所以这一步最好的理解是：
+
+- global generating function 先帮我们把 `B,D` 解出来
+- Lie transform 再用这些 kernels 去组织更方便的 canonical flow
+
+换句话说：
+
+**在当前阶数上，`B,D` 是可以共用的；Lie transform 的真正优势，不在于重新发明一套不同的三次 kernels，而在于它对高阶结构和 1D 几何解释更自然。**
+
+## 29. 关于 1D 简化，目前已经理顺的一点
+
+进入 section 4 以后，一个关键理解是：
+
+- 真正起作用的核心假设是 `1D`
+- 再加上 triad 波数闭合
+
+```text
+k_1 + k_2 + k_3 = 0
+```
+
+而不是先额外假设 `k_1,k_2,k_3` 有某种固定大小顺序。
+
+原因是：
+
+- 在一维里，三个实数如果相加为零，就不可能全同号
+- 必然有一个波数的符号和另外两个相反
+- 因而自动推出：其中一个绝对值等于另外两个绝对值之和
+
+这不是新的附加假设，而是 `1D + triad closure` 自动给出的几何事实。
+
+正是这个事实让：
+
+- `(3.4)` 的 `D` 分子必有一个因子为零，因此 `D=0`
+- `(3.5)` 的 `B` 自动塌缩成只含 `|k|` 和 `sgn(k)` 的形式
+
+所以 1D 的特殊性，首先来自 triad 闭合几何，而不是某个人为指定的大小排序。
+
+## 30. 关于 section 4 的几何理解，目前已经理顺的一点
+
+现在已经比较清楚的一条线是：
+
+- section 3 先抽象地构造 canonical transform
+- section 4 在 1D 里把它真正解成一个坐标重排问题
+
+具体地说：
+
+- `chi` 不是新物理量
+- 它只是 characteristic 的标签，也就是“原来那个表面点的编号”
+- 关系
+
+```text
+x = chi + lambda ZTilde_0(chi)
+```
+
+说明原来位于 `chi` 的点，被水平搬到欧拉位置 `x`
+
+所以：
+
+- `x` 是现在的位置
+- `chi` 是原来的标签
+
+这正好把抽象 Lie flow 重新翻译成了一个具体的坐标变换。
+
+因此 `(4.13)` 最好理解成：
+
+- 不是另一个新动力学方程
+- 而是“已经解出的 1D 坐标重排”如何把线性变量重建成真实物理表面
+
+## 31. 关于“重建”到底是什么意思
+
+这里最容易混淆的地方是：
+
+- 好像作者先有一套线性变量
+- 然后又“重建”出一个新的表面
+
+其实这里的“重建”不是重新求一个新的动力学解，而是在做：
+
+**把参数坐标里的表面点集，重新翻译成欧拉坐标里的物理表面。**
+
+要分清三件事：
+
+- `chi` 或 `y`：点的标签，也就是参数坐标
+- `x`：点最后出现的欧拉位置
+- 场值：这个点本身携带的高度/势函数等信息
+
+section 4 先通过 characteristic relation 解出：
+
+```text
+x = chi + lambda ZTilde_0(chi)
+```
+
+这句话的意思是：
+
+- 编号为 `chi` 的点
+- 被水平搬到了欧拉位置 `x`
+
+而 `(4.13)` 做的，就是把这批已经被搬动的点，重新按固定空间位置 `x`
+来读成物理表面 `zeta(x)`。
+
+所以“重建”真正的意思是：
+
+- 不是生成新的自由波
+- 不是再求一遍动力学
+- 而是把同一批点从参数表示翻译成欧拉表示
+
+这也解释了为什么重建会自动带来：
+
+- crest sharpening
+- trough flattening
+- higher harmonics
+
+因为这些结构来自坐标翻译本身的非线性，而不是来自额外的自由传播模态。
+
+## 32. 关于 section 4 里的 `y` 记号，一个容易混淆的点
+
+在 1D 的 section 4 里，paper 里出现的 `y` 不应该理解成二维水平平面中的第二个方向坐标。
+
+这里的 `y` 更接近：
+
+- `chi` 那样的参数标签
+- characteristic 的初始坐标
+- 重建积分里用来标记“同一个表面点是谁”的变量
+
+所以：
+
+- `x` 是欧拉位置
+- `y` / `chi` 是参数坐标
+
+当 `(4.13)` 或 `(4.14)` 里写 `dy` 积分时，最好的心智模型是：
+
+**我在对参数点集积分，再把它们翻译回欧拉表面；不是在沿几何上的另一个方向轴积分。**
