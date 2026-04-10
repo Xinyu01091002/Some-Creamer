@@ -1,29 +1,34 @@
 # MATLAB Prototype Workspace
 
-This folder contains the current MATLAB prototype workspace for a directional Creamer transform based on the general deep-water 1989 kernels, plus MF12 comparison scripts.
+This folder contains the current MATLAB prototype workspace for Creamer/MF12 comparisons. The canonical layout is now split by role so the directional and unidirectional workflows are easier to navigate.
 
-## Files
+## Structure
 
-- `directional_creamer_transform.m`
-  - core routine
-  - input: one linear parent surface `eta_lin(x,y)` plus `x_vec`, `y_vec`
-  - output: one nonlinear reconstructed surface `eta_nl(x,y)` and the corresponding reconstructed `phi_s(x,y)`
-- `run_directional_creamer_case.m`
-  - second-order `eta20/eta22` comparison driver against MF12
-- `run_directional_creamer_phi_case.m`
-  - second-order `phi20/phi22` comparison driver against MF12
-- `run_directional_creamer_eta33_case.m`
-  - third-order `eta33` comparison driver against MF12
-- `creamer_four_phase_separation.m`
-  - harmonic-sector separator used to extract `eta20`, `eta22`, `eta33`, `phi20`, and `phi22`
+- `core/`
+  - shared Creamer implementation and shared harmonic-separation utilities
+  - canonical home of `directional_creamer_transform.m`
+- `directional/`
+  - directional runners and directional plotting helpers
+  - use these as the main entrypoints for 2D case studies
+- `unidirectional/`
+  - lighter-weight 1D focused-wave workflow
+  - includes `Linear_focus_envelope.m`, the 1D four-phase separator, and the live MF12 bridge
+- `validation/`
+  - MF12/validation loaders and live MF12 helpers
+- `output/directional/`
+  - directional PNG outputs
+- `output/unidirectional/`
+  - unidirectional PNG outputs
+
+The older files left directly under `MATLAB/` are retained for compatibility, but the subdirectories above are the intended places to work from.
 
 ## Current Scope
 
 - deep water only
-- directional 2D case
+- directional 2D case plus a lighter unidirectional 1D testbed
 - second-order and exploratory third-order reconstruction
-- MF12 comparison connected through the fixed-`Akp` validation `.mat`
-- no performance optimization yet
+- MF12 comparison connected either through the fixed-`Akp` validation `.mat` or through live MF12 spectral calls
+- a standalone non-MEX C++ backend for the expensive directional canonical-pair lambda-flow
 
 ## Important v1 Assumption
 
@@ -42,3 +47,14 @@ This remains the main closure assumption in the current implementation and shoul
 - In current testing:
   - second-order `eta` and `phi` comparisons are already fairly good
   - third-order `eta33` is much more sensitive to active-mode count than to small changes in lambda-step count
+
+## C++ Backend
+
+- The C++ source lives in `../cpp/creamer_flow/`.
+- MATLAB still prepares spectra, runs four-phase separation, compares against MF12, and plots.
+- C++ now selects active modes and builds the canonical-pair interaction plan internally from compact binary job files, instead of requiring MATLAB to export `dest_idx`, `Bz`, `Bphi`, and `D`.
+- The directional `eta33` runner can select this backend with `creamer_backend = 'cpp'`.
+- Standard FFTW was not found on PATH during the current setup check; C++ therefore still receives spectral inputs from MATLAB rather than performing FFTs itself.
+- A current wide-spreading stress test with `Akp=0.18`, `alpha=8`, `spread=30`, `N_lambda=6`, and `8000` active modes finished in about `204.7 s` for four phases.
+- In that case, off-center `eta33` moved closer to MF12 when increasing from `6000` to `8000` modes, but centerline `eta33` slightly overshot MF12.
+- On the current 16 GB workstation, treat `8000-10000` active modes as the practical range for this full-pair-kernel implementation.

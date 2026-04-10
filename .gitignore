@@ -1,5 +1,5 @@
 *.mat
-
+*.png
 # MATLAB temporary / autosave files
 *.asv
 *.m~
@@ -9,3 +9,6 @@ slprj/
 tmp_*
 
 external/
+
+# C++ build artifacts
+cpp/**/build/

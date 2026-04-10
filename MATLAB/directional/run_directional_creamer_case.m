@@ -12,7 +12,12 @@
 clearvars -except akp_index alpha_index chi_index spread_index;
 clc;
 
-repo_root = fileparts(fileparts(mfilename('fullpath')));
+this_dir = fileparts(mfilename('fullpath'));
+matlab_dir = fileparts(this_dir);
+repo_root = fileparts(matlab_dir);
+addpath(this_dir);
+addpath(fullfile(matlab_dir, 'core'));
+addpath(fullfile(matlab_dir, 'validation'));
 data_file = fullfile(repo_root, ...
     'directional_waves_multi_Akp0.020-0.180_Alpha1-8_Chi0-0_Spread5-30_adaptive100pc_20260409_154705.mat');
 
@@ -68,7 +73,7 @@ end
     validation_file, S.parameters.Alpha_values, chi_deg, spread_deg, 50, ...
     eta_lin, x_vec, y_vec, akp_val);
 
-out_dir = fullfile(repo_root, 'MATLAB', 'output');
+out_dir = fullfile(repo_root, 'MATLAB', 'output', 'directional');
 if ~exist(out_dir, 'dir')
     mkdir(out_dir);
 end

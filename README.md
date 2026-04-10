@@ -94,17 +94,34 @@ This repository is organized around three goals:
 - The second-order validation workflow is now connected to the fixed-`Akp` MF12 HDF5 `.mat`:
   - [directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat](/c:/Research/Some%20Creamer/directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat)
 - Current plotting drivers include:
-  - [MATLAB/run_directional_creamer_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_case.m) for second-order `eta20/eta22`
-  - [MATLAB/run_directional_creamer_phi_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_phi_case.m) for second-order `phi20/phi22`
-  - [MATLAB/run_directional_creamer_eta33_case.m](/c:/Research/Some%20Creamer/MATLAB/run_directional_creamer_eta33_case.m) for third-order `eta33`
+  - [run_directional_creamer_case.m](/c:/Research/Some%20Creamer/MATLAB/directional/run_directional_creamer_case.m) for directional second-order `eta20/eta22`
+  - [run_directional_creamer_phi_case.m](/c:/Research/Some%20Creamer/MATLAB/directional/run_directional_creamer_phi_case.m) for directional second-order `phi20/phi22`
+  - [run_directional_creamer_eta33_case.m](/c:/Research/Some%20Creamer/MATLAB/directional/run_directional_creamer_eta33_case.m) for directional third-order `eta33`
+  - [run_unidirectional_creamer_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_creamer_case.m) for unidirectional live MF12 vs Creamer `eta20/eta22/eta33`
+- The MATLAB workspace is now organized around:
+  - [core](/c:/Research/Some%20Creamer/MATLAB/core) for shared Creamer numerics
+  - [directional](/c:/Research/Some%20Creamer/MATLAB/directional) for 2D runners
+  - [unidirectional](/c:/Research/Some%20Creamer/MATLAB/unidirectional) for the 1D testbed
+  - [validation](/c:/Research/Some%20Creamer/MATLAB/validation) for MF12/validation bridges
+  - [output/directional](/c:/Research/Some%20Creamer/MATLAB/output/directional) and [output/unidirectional](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional) for figures
 - The current `lambda`-flow implementation supports three numerical variants:
   - `canonical_pair`
   - `legacy_zeta_only`
   - `backward_picard_316`
+- A standalone non-MEX C++ backend now exists in [cpp/creamer_flow](/c:/Research/Some%20Creamer/cpp/creamer_flow) for the expensive canonical-pair lambda-flow.
+- MATLAB still handles data loading, FFT/IFFT reconstruction, MF12 comparison, four-phase separation, and plotting, while C++ now builds the active-mode interaction plan internally and runs the RK4 flow with OpenMP support.
 - Present evidence from the directional tests suggests:
   - second-order `eta` and `phi` agreement with MF12 is already quite good
   - third-order `eta33` can agree very well in narrow-spreading cases when enough active modes are retained
   - poor wide-spreading or low-component results are more plausibly numerical-representation issues than structural failures of the transform itself
+- Latest wide-spreading C++ test for `Akp=0.18`, `alpha=8`, `spread=30`, `N_lambda=6`, and `8000` active modes gave:
+  - centerline max `|MF12 eta33| = 0.0579692`
+  - centerline max `|Creamer eta33| = 0.060497`
+  - off-center max `|MF12 eta33| = 0.00769017`
+  - off-center max `|Creamer eta33| = 0.00584702`
+  - four-phase runtime about `204.7 s`
+- Increasing the wide-spreading case from `6000` to `8000` active modes moved the off-center `eta33` result closer to MF12, while the centerline amplitude began to slightly overshoot MF12.
+- With the current full pair-kernel C++ implementation, `8000-10000` active modes is the practical near-term range on the current 16 GB workstation; going much beyond that should use a block/on-the-fly interaction kernel rather than storing all pair arrays.
 
 ## Suggested Workflow
 

@@ -1,9 +1,14 @@
 % Compare four-phase-separated Creamer eta33 against MF12 eta33.
 
-clearvars -except akp_index alpha_index chi_index spread_index max_active_modes n_lambda_steps lambda_flow_model n_picard_iters;
+clearvars -except akp_index alpha_index chi_index spread_index min_active_modes max_active_modes n_lambda_steps lambda_flow_model lambda_stepper creamer_backend n_picard_iters lambda_rtol lambda_atol lambda_initial_step lambda_min_step lambda_max_step;
 clc;
 
-repo_root = fileparts(fileparts(mfilename('fullpath')));
+this_dir = fileparts(mfilename('fullpath'));
+matlab_dir = fileparts(this_dir);
+repo_root = fileparts(matlab_dir);
+addpath(this_dir);
+addpath(fullfile(matlab_dir, 'core'));
+addpath(fullfile(matlab_dir, 'validation'));
 data_file = fullfile(repo_root, ...
     'directional_waves_multi_Akp0.020-0.180_Alpha1-8_Chi0-0_Spread5-30_adaptive100pc_20260409_154705.mat');
 
@@ -24,11 +29,20 @@ end
 if ~exist('max_active_modes', 'var') || isempty(max_active_modes)
     max_active_modes = 3000;
 end
+if ~exist('min_active_modes', 'var') || isempty(min_active_modes)
+    min_active_modes = 0;
+end
 if ~exist('n_lambda_steps', 'var') || isempty(n_lambda_steps)
     n_lambda_steps = 12;
 end
 if ~exist('lambda_flow_model', 'var') || isempty(lambda_flow_model)
     lambda_flow_model = 'canonical_pair';
+end
+if ~exist('lambda_stepper', 'var') || isempty(lambda_stepper)
+    lambda_stepper = 'fixed_rk4';
+end
+if ~exist('creamer_backend', 'var') || isempty(creamer_backend)
+    creamer_backend = 'matlab';
 end
 if ~exist('n_picard_iters', 'var') || isempty(n_picard_iters)
     n_picard_iters = 4;
@@ -45,13 +59,32 @@ spread_deg = S.parameters.spread_angles(spread_index);
 cfg = struct();
 cfg.g = 9.81;
 cfg.energy_fraction = 0.9999999999;
+cfg.min_active_modes = min_active_modes;
 cfg.max_active_modes = max_active_modes;
 cfg.n_lambda_steps = n_lambda_steps;
 cfg.n_picard_iters = n_picard_iters;
 cfg.lambda_flow_model = lambda_flow_model;
+cfg.lambda_stepper = lambda_stepper;
+if exist('lambda_rtol', 'var') && ~isempty(lambda_rtol)
+    cfg.lambda_rtol = lambda_rtol;
+end
+if exist('lambda_atol', 'var') && ~isempty(lambda_atol)
+    cfg.lambda_atol = lambda_atol;
+end
+if exist('lambda_initial_step', 'var') && ~isempty(lambda_initial_step)
+    cfg.lambda_initial_step = lambda_initial_step;
+end
+if exist('lambda_min_step', 'var') && ~isempty(lambda_min_step)
+    cfg.lambda_min_step = lambda_min_step;
+end
+if exist('lambda_max_step', 'var') && ~isempty(lambda_max_step)
+    cfg.lambda_max_step = lambda_max_step;
+end
 cfg.propagation_direction_deg = chi_deg;
 cfg.preserve_mean = true;
 cfg.verbose = true;
+cfg.cpp_exe = fullfile(repo_root, 'cpp', 'creamer_flow', 'build', 'creamer_flow_plan.exe');
+cfg.cpp_job_dir = fullfile(tempdir, 'creamer_cpp_directional_eta33');
 
 validation_file = fullfile(repo_root, ...
     'directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat');
@@ -59,7 +92,11 @@ validation_case = load_validation_third_order_case( ...
     validation_file, alpha_val, chi_deg, spread_deg, 50, akp_val);
 
 t_sep = tic;
-creamer_sep = creamer_four_phase_separation(eta_lin, x_vec, y_vec, cfg);
+if strcmpi(creamer_backend, 'cpp')
+    creamer_sep = creamer_four_phase_separation_cpp(eta_lin, x_vec, y_vec, cfg);
+else
+    creamer_sep = creamer_four_phase_separation(eta_lin, x_vec, y_vec, cfg);
+end
 creamer_runtime_s = toc(t_sep);
 
 [X_target, Y_target] = meshgrid(x_vec, y_vec);
@@ -87,6 +124,7 @@ nx = numel(x_vec);
 Lx = dx * nx;
 kp = S.parameters.kp;
 lambda_p = 2*pi/kp;
+points_per_wavelength = lambda_p / dx;
 x_over_lambda = x_vec / lambda_p;
 x_focus_n = S.parameters.x_focus / lambda_p;
 xlim_wave = [x_focus_n - 4.0, x_focus_n + 4.0];
@@ -101,14 +139,14 @@ spec_center_eta33_creamer = abs(fft(center_eta33_creamer) / nx);
 spec_off_eta33_val = abs(fft(off_eta33_val) / nx);
 spec_off_eta33_creamer = abs(fft(off_eta33_creamer) / nx);
 
-out_dir = fullfile(repo_root, 'MATLAB', 'output');
+out_dir = fullfile(repo_root, 'MATLAB', 'output', 'directional');
 if ~exist(out_dir, 'dir')
     mkdir(out_dir);
 end
 
-tag = sprintf('alpha%d_chi%d_spread%d_Akp%04d_mc%d_nl%d_%s_pi%d', ...
+tag = sprintf('alpha%d_chi%d_spread%d_Akp%04d_mc%d_min%d_nl%d_%s_%s_%s_pi%d', ...
     round(alpha_val), round(chi_deg), round(spread_deg), round(10000 * akp_val), ...
-    round(max_active_modes), round(n_lambda_steps), lambda_flow_model, round(n_picard_iters));
+    round(max_active_modes), round(min_active_modes), round(n_lambda_steps), lambda_flow_model, lambda_stepper, creamer_backend, round(n_picard_iters));
 
 fig = figure('Color', 'w', 'Position', [120 120 1450 980]);
 tiledlayout(2, 3, 'Padding', 'compact', 'TileSpacing', 'compact');
@@ -181,8 +219,8 @@ ylabel('Amplitude');
 
 sgtitle(sprintf(['Third-order comparison: \\eta_{33} and spectra | ', ...
     'A k_p = %.3f, \\chi = %g^\\circ, \\alpha = %g, spread = %g^\\circ, ', ...
-    'modes = %d, N_\\lambda = %d, model = %s'], ...
-    akp_val, chi_deg, alpha_val, spread_deg, max_active_modes, n_lambda_steps, lambda_flow_model));
+    'ppw = %.2f, max/min modes = %d/%d, N_\\lambda = %d, model = %s, stepper = %s, backend = %s'], ...
+    akp_val, chi_deg, alpha_val, spread_deg, points_per_wavelength, max_active_modes, min_active_modes, n_lambda_steps, lambda_flow_model, lambda_stepper, creamer_backend));
 
 out_png = fullfile(out_dir, ['directional_creamer_eta33_' tag '.png']);
 exportgraphics(fig, out_png, 'Resolution', 160);
@@ -191,8 +229,11 @@ fprintf('\nSaved third-order comparison figure to:\n  %s\n', out_png);
 fprintf('Creamer four-phase runtime             = %.3f s\n', creamer_runtime_s);
 fprintf('Validation source                      = %s\n', validation_file);
 fprintf('Configured max active modes            = %d\n', max_active_modes);
+fprintf('Configured min active modes            = %d\n', min_active_modes);
 fprintf('Configured lambda steps                = %d\n', n_lambda_steps);
 fprintf('Configured lambda model                = %s\n', lambda_flow_model);
+fprintf('Configured lambda stepper              = %s\n', lambda_stepper);
+fprintf('Configured Creamer backend             = %s\n', creamer_backend);
 fprintf('Configured Picard iterations           = %d\n', n_picard_iters);
 fprintf('Centerline max |MF12 eta33|            = %.6g\n', max(abs(center_eta33_val)));
 fprintf('Centerline max |Creamer eta33|         = %.6g\n', max(abs(center_eta33_creamer)));

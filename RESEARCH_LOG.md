@@ -303,3 +303,52 @@ All times below are UTC unless noted otherwise.
   - common MATLAB temporary files
   - local scratch files such as `tmp_*`
 - Removed temporary smoke-test files used during MATLAB debugging so the repository is cleaner for GitHub sync.
+
+### MATLAB workspace organization refresh
+
+- Added a dedicated [MATLAB/unidirectional](/c:/Research/Some%20Creamer/MATLAB/unidirectional) workflow for focused 1D Creamer vs live MF12 tests.
+- Introduced a clearer canonical MATLAB layout:
+  - [MATLAB/core](/c:/Research/Some%20Creamer/MATLAB/core)
+  - [MATLAB/directional](/c:/Research/Some%20Creamer/MATLAB/directional)
+  - [MATLAB/unidirectional](/c:/Research/Some%20Creamer/MATLAB/unidirectional)
+  - [MATLAB/validation](/c:/Research/Some%20Creamer/MATLAB/validation)
+- Split figure outputs into:
+  - [MATLAB/output/directional](/c:/Research/Some%20Creamer/MATLAB/output/directional)
+  - [MATLAB/output/unidirectional](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional)
+- The older root-level MATLAB files are still retained as compatibility copies, but the subdirectory layout above should now be treated as the main working structure.
+
+### Standalone C++ Creamer flow prototype
+
+- Added a standalone, non-MEX C++17 backend under [cpp/creamer_flow](/c:/Research/Some%20Creamer/cpp/creamer_flow).
+- MATLAB still handles data loading, initial FFT construction, four-phase separation, MF12 comparison, inverse FFT, and plotting.
+- The C++ backend now:
+  - reads compact job files containing grid metadata, numerical parameters, and initial `zeta_hat` / `phi_hat`
+  - selects active modes internally
+  - builds the directional canonical-pair `Bz`, `Bphi`, and `D` interaction plan internally
+  - runs fixed-step RK4 lambda-flow with OpenMP support
+- A small synthetic test matched the MATLAB backend to roundoff:
+  - max physical-space difference `1.39e-17`
+  - active mode count matched exactly
+- Directional target test recorded for `Akp=0.18`, `alpha=8`, `chi=0`, `spread=30`, `N_lambda=6`, `6000` active modes:
+  - output figure: [directional_creamer_eta33_alpha8_chi0_spread30_Akp1800_mc6000_min6000_nl6_canonical_pair_fixed_rk4_cpp_pi4.png](/c:/Research/Some%20Creamer/MATLAB/output/directional/directional_creamer_eta33_alpha8_chi0_spread30_Akp1800_mc6000_min6000_nl6_canonical_pair_fixed_rk4_cpp_pi4.png)
+  - four-phase runtime `95.5 s`
+  - centerline max `|MF12 eta33| = 0.0579692`
+  - centerline max `|Creamer eta33| = 0.0592949`
+  - off-center max `|MF12 eta33| = 0.00769017`
+  - off-center max `|Creamer eta33| = 0.00550984`
+- Follow-up run with `8000` active modes:
+  - output figure: [directional_creamer_eta33_alpha8_chi0_spread30_Akp1800_mc8000_min8000_nl6_canonical_pair_fixed_rk4_cpp_pi4.png](/c:/Research/Some%20Creamer/MATLAB/output/directional/directional_creamer_eta33_alpha8_chi0_spread30_Akp1800_mc8000_min8000_nl6_canonical_pair_fixed_rk4_cpp_pi4.png)
+  - four-phase runtime `204.7 s`
+  - centerline max `|MF12 eta33| = 0.0579692`
+  - centerline max `|Creamer eta33| = 0.060497`
+  - off-center max `|MF12 eta33| = 0.00769017`
+  - off-center max `|Creamer eta33| = 0.00584702`
+  - interpretation: off-center `eta33` continues moving toward MF12 with more active modes, while centerline amplitude has started to overshoot slightly
+- Practical mode-count note:
+  - current full-pair C++ implementation stores `O(N_active^2)` destination and kernel arrays
+  - on the current 16 GB workstation, `8000-10000` active modes is a reasonable near-term operating range
+  - larger runs should move to a block/on-the-fly kernel to avoid storing all pair arrays
+- FFTW note:
+  - standard FFTW was not found on PATH
+  - MATLAB's private FFTW DLLs exist under the MATLAB installation, but the current C++ backend does not link against them
+  - if C++ is later promoted to accept physical-space fields directly, use a standard FFTW installation instead of relying on MATLAB-private DLLs

@@ -62,7 +62,11 @@ x_vec = x_vec(:).';
 y_vec = y_vec(:).';
 
 dx = mean(diff(x_vec));
-dy = mean(diff(y_vec));
+if ny > 1
+    dy = mean(diff(y_vec));
+else
+    dy = 1;
+end
 Lx = dx * nx;
 Ly = dy * ny;
 n_total = nx * ny;
@@ -80,51 +84,33 @@ if ~cfg.preserve_mean
     phi_bar_hat(1, 1) = 0;
 end
 
-active_mask = local_build_active_mask(zeta_hat, cfg.energy_fraction, cfg.max_active_modes, cfg.preserve_mean);
+active_mask = local_build_active_mask(zeta_hat, cfg.energy_fraction, cfg.min_active_modes, cfg.max_active_modes, cfg.preserve_mean);
 n_active = nnz(active_mask);
+active_plan = local_build_active_plan(active_mask, Kmag, mx, ny, nx, cfg.g, cfg.plan_chunk_size);
 
 if cfg.n_lambda_steps <= 0
-    delta_zeta_hat = local_inverse_zeta_correction(zeta_hat, phi_bar_hat, active_mask, Kmag, kx, mx, ny, nx, cfg);
+    delta_zeta_hat = local_inverse_zeta_correction(zeta_hat, phi_bar_hat, active_plan, ny, nx);
     eta_nl_hat = zeta_hat + delta_zeta_hat;
-    phi_nl_hat = phi_bar_hat + local_inverse_phi_correction(zeta_hat, phi_bar_hat, active_mask, Kmag, kx, mx, ny, nx);
+    phi_nl_hat = phi_bar_hat + local_inverse_phi_correction(zeta_hat, phi_bar_hat, active_plan, ny, nx);
 else
     zeta_state = zeta_hat;
     phi_state = phi_bar_hat;
-    h_lambda = -1 / cfg.n_lambda_steps;
-    for step = 1:cfg.n_lambda_steps
-        if strcmpi(cfg.lambda_flow_model, 'canonical_pair')
-            [k1z, k1p] = local_coupled_lambda_rhs(zeta_state, phi_state, active_mask, Kmag, kx, mx, ny, nx, cfg);
-            [k2z, k2p] = local_coupled_lambda_rhs( ...
-                zeta_state + 0.5 * h_lambda * k1z, ...
-                phi_state + 0.5 * h_lambda * k1p, ...
-                active_mask, Kmag, kx, mx, ny, nx, cfg);
-            [k3z, k3p] = local_coupled_lambda_rhs( ...
-                zeta_state + 0.5 * h_lambda * k2z, ...
-                phi_state + 0.5 * h_lambda * k2p, ...
-                active_mask, Kmag, kx, mx, ny, nx, cfg);
-            [k4z, k4p] = local_coupled_lambda_rhs( ...
-                zeta_state + h_lambda * k3z, ...
-                phi_state + h_lambda * k3p, ...
-                active_mask, Kmag, kx, mx, ny, nx, cfg);
+    if strcmpi(cfg.lambda_flow_model, 'backward_picard_316')
+        [zeta_state, phi_state] = local_backward_picard_316( ...
+            zeta_hat, phi_bar_hat, active_mask, active_plan, Kmag, kx, mx, ny, nx, cfg);
+    elseif strcmpi(cfg.lambda_stepper, 'adaptive_rk4')
+        [zeta_state, phi_state] = local_adaptive_lambda_flow( ...
+            zeta_state, phi_state, active_plan, Kmag, KX, KY, kx, mx, ny, nx, cfg);
+    else
+        h_lambda = -1 / cfg.n_lambda_steps;
+        for step = 1:cfg.n_lambda_steps
+            [zeta_state, phi_state] = local_take_fixed_lambda_step( ...
+                zeta_state, phi_state, h_lambda, active_plan, Kmag, KX, KY, kx, mx, ny, nx, cfg);
 
-            zeta_state = zeta_state + (h_lambda / 6) * (k1z + 2*k2z + 2*k3z + k4z);
-            phi_state = phi_state + (h_lambda / 6) * (k1p + 2*k2p + 2*k3p + k4p);
-        elseif strcmpi(cfg.lambda_flow_model, 'backward_picard_316')
-            [zeta_state, phi_state] = local_backward_picard_316( ...
-                zeta_hat, phi_bar_hat, active_mask, Kmag, kx, mx, ny, nx, cfg);
-            break;
-        else
-            k1z = local_legacy_lambda_rhs(zeta_state, active_mask, Kmag, KX, KY, kx, mx, ny, nx, cfg);
-            k2z = local_legacy_lambda_rhs(zeta_state + 0.5 * h_lambda * k1z, active_mask, Kmag, KX, KY, kx, mx, ny, nx, cfg);
-            k3z = local_legacy_lambda_rhs(zeta_state + 0.5 * h_lambda * k2z, active_mask, Kmag, KX, KY, kx, mx, ny, nx, cfg);
-            k4z = local_legacy_lambda_rhs(zeta_state + h_lambda * k3z, active_mask, Kmag, KX, KY, kx, mx, ny, nx, cfg);
-            zeta_state = zeta_state + (h_lambda / 6) * (k1z + 2*k2z + 2*k3z + k4z);
-            phi_state = local_linear_phi_from_eta(zeta_state, Kmag, KX, KY, cfg.g, cfg.propagation_direction_deg);
-        end
-
-        if ~cfg.preserve_mean
-            zeta_state(1,1) = 0;
-            phi_state(1,1) = 0;
+            if ~cfg.preserve_mean
+                zeta_state(1,1) = 0;
+                phi_state(1,1) = 0;
+            end
         end
     end
     eta_nl_hat = zeta_state;
@@ -151,6 +137,7 @@ diagnostics.active_mode_count = n_active;
 diagnostics.energy_fraction = cfg.energy_fraction;
 diagnostics.n_lambda_steps = cfg.n_lambda_steps;
 diagnostics.lambda_flow_model = cfg.lambda_flow_model;
+diagnostics.lambda_stepper = cfg.lambda_stepper;
 diagnostics.max_eta_lin = max(abs(eta_lin(:)));
 diagnostics.max_eta_nl = max(abs(eta_nl(:)));
 diagnostics.max_imag_eta_nl = max(abs(imag(ifft2(eta_nl_hat * n_total))), [], 'all');
@@ -167,6 +154,7 @@ if cfg.verbose
     fprintf('  Active modes        : %d\n', n_active);
     fprintf('  Lambda RK steps     : %d\n', cfg.n_lambda_steps);
     fprintf('  Lambda flow model   : %s\n', cfg.lambda_flow_model);
+    fprintf('  Lambda stepper      : %s\n', cfg.lambda_stepper);
     fprintf('  Energy kept         : %.2f%%\n', 100 * cfg.energy_fraction);
     fprintf('  Max |eta_lin|       : %.6g\n', diagnostics.max_eta_lin);
     fprintf('  Max |eta_nl|        : %.6g\n', diagnostics.max_eta_nl);
@@ -182,10 +170,18 @@ function cfg = local_apply_defaults(cfg)
 defaults = struct( ...
     'g', 9.81, ...
     'energy_fraction', 0.99, ...
+    'min_active_modes', 0, ...
     'max_active_modes', inf, ...
     'n_lambda_steps', 0, ...
     'n_picard_iters', 4, ...
     'lambda_flow_model', 'canonical_pair', ...
+    'lambda_stepper', 'fixed_rk4', ...
+    'lambda_rtol', 1e-6, ...
+    'lambda_atol', 1e-9, ...
+    'lambda_initial_step', [], ...
+    'lambda_min_step', 1e-4, ...
+    'lambda_max_step', 0.25, ...
+    'plan_chunk_size', 128, ...
     'propagation_direction_deg', 0, ...
     'preserve_mean', true, ...
     'verbose', true);
@@ -199,7 +195,7 @@ for n = 1:numel(names)
 end
 end
 
-function active_mask = local_build_active_mask(zeta_hat, energy_fraction, max_active_modes, preserve_mean)
+function active_mask = local_build_active_mask(zeta_hat, energy_fraction, min_active_modes, max_active_modes, preserve_mean)
 energy_density = abs(zeta_hat).^2;
 flat_energy = energy_density(:);
 [sorted_energy, order] = sort(flat_energy, 'descend');
@@ -208,6 +204,9 @@ cumulative_fraction = cumsum(sorted_energy) / sum(sorted_energy);
 keep_count = find(cumulative_fraction >= energy_fraction, 1, 'first');
 if isempty(keep_count)
     keep_count = numel(order);
+end
+if isfinite(min_active_modes)
+    keep_count = max(keep_count, min(min_active_modes, numel(order)));
 end
 if isfinite(max_active_modes)
     keep_count = min(keep_count, max_active_modes);
@@ -222,201 +221,203 @@ else
 end
 end
 
-function delta_zeta_hat = local_inverse_zeta_correction(zeta_hat, phi_hat, active_mask, Kmag, kx, mx, ny, nx, cfg)
+function plan = local_build_active_plan(active_mask, Kmag, mx, ny, nx, g, chunk_size)
 [row_idx, col_idx] = find(active_mask);
 active_idx = sub2ind([ny, nx], row_idx, col_idx);
 n_active = numel(active_idx);
 
-mode_struct = struct();
-mode_struct.mx = mx(col_idx).';
-my = [0:(ny/2), (-ny/2 + 1):-1];
-mode_struct.my = my(row_idx).';
-mode_struct.kmag = Kmag(active_idx);
-mode_struct.zeta = zeta_hat(active_idx);
-mode_struct.phi = phi_hat(active_idx);
+my = local_fft_mode_numbers(ny);
+plan = struct();
+plan.active_idx = active_idx;
+plan.mx = mx(col_idx).';
+plan.my = my(row_idx).';
+plan.kmag = Kmag(active_idx);
+plan.n_active = n_active;
+plan.chunk_size = max(1, round(chunk_size));
+plan.dest_idx = zeros(n_active, n_active, 'uint32');
+plan.Bz = zeros(n_active, n_active);
+plan.Bphi = zeros(n_active, n_active);
+plan.D = zeros(n_active, n_active);
 
-delta_zeta_hat = zeros(ny, nx);
 for a = 1:n_active
-    mx_a = mode_struct.mx(a);
-    my_a = mode_struct.my(a);
-    kmag_a = mode_struct.kmag(a);
-    zeta_a = mode_struct.zeta(a);
-    phi_a = mode_struct.phi(a);
+    mx_a = plan.mx(a);
+    my_a = plan.my(a);
+    kmag_a = plan.kmag(a);
 
     for b = 1:n_active
-        mx_b = mode_struct.mx(b);
-        my_b = mode_struct.my(b);
-        kmag_b = mode_struct.kmag(b);
-        zeta_b = mode_struct.zeta(b);
-        phi_b = mode_struct.phi(b);
-
-        mx_k = mx_a + mx_b;
-        my_k = my_a + my_b;
-
-        col_k = local_mode_to_index(mx_k, nx);
-        row_k = local_mode_to_index(my_k, ny);
-
+        kmag_b = plan.kmag(b);
+        col_k = local_mode_to_index(mx_a + plan.mx(b), nx);
+        row_k = local_mode_to_index(my_a + plan.my(b), ny);
         kmag_k = Kmag(row_k, col_k);
 
-        d_term = 0;
-        if kmag_a > 0 && kmag_b > 0 && abs(phi_a) > 0 && abs(phi_b) > 0
-            d_val = local_kernel_D(kmag_k, kmag_a, kmag_b, cfg.g);
-            d_term = 3 * d_val * phi_a * phi_b;
-        end
-
-        b_val = local_kernel_B(kmag_a, kmag_b, kmag_k);
-        b_term = b_val * zeta_a * zeta_b;
-
-        delta_zeta_hat(row_k, col_k) = delta_zeta_hat(row_k, col_k) - (d_term + b_term);
+        plan.dest_idx(a, b) = uint32(sub2ind([ny, nx], row_k, col_k));
+        plan.D(a, b) = local_kernel_D(kmag_k, kmag_a, kmag_b, g);
+        plan.Bz(a, b) = local_kernel_B(kmag_a, kmag_b, kmag_k);
+        plan.Bphi(a, b) = local_kernel_B(kmag_k, kmag_a, kmag_b);
     end
 end
 end
 
-function delta_phi_hat = local_inverse_phi_correction(zeta_hat, phi_hat, active_mask, Kmag, kx, mx, ny, nx)
-[row_idx, col_idx] = find(active_mask);
-active_idx = sub2ind([ny, nx], row_idx, col_idx);
-n_active = numel(active_idx);
+function delta_zeta_hat = local_inverse_zeta_correction(zeta_hat, phi_hat, plan, ny, nx)
+n_active = plan.n_active;
+zeta_active = zeta_hat(plan.active_idx);
+phi_active = phi_hat(plan.active_idx);
+delta_zeta_hat = zeros(ny, nx);
+for a = 1:n_active
+    zeta_a = zeta_active(a);
+    phi_a = phi_active(a);
 
-mode_struct = struct();
-mode_struct.mx = mx(col_idx).';
-my = [0:(ny/2), (-ny/2 + 1):-1];
-mode_struct.my = my(row_idx).';
-mode_struct.kmag = Kmag(active_idx);
-mode_struct.zeta = zeta_hat(active_idx);
-mode_struct.phi = phi_hat(active_idx);
+    for b = 1:n_active
+        dest = double(plan.dest_idx(a, b));
+        delta_zeta_hat(dest) = delta_zeta_hat(dest) ...
+            - (3 * plan.D(a, b) * phi_a * phi_active(b) + plan.Bz(a, b) * zeta_a * zeta_active(b));
+    end
+end
+end
 
+function delta_phi_hat = local_inverse_phi_correction(zeta_hat, phi_hat, plan, ny, nx)
+n_active = plan.n_active;
+zeta_active = zeta_hat(plan.active_idx);
+phi_active = phi_hat(plan.active_idx);
 delta_phi_hat = zeros(ny, nx);
 for a = 1:n_active
-    mx_a = mode_struct.mx(a);
-    my_a = mode_struct.my(a);
-    zeta_a = mode_struct.zeta(a);
+    zeta_a = zeta_active(a);
 
     for b = 1:n_active
-        mx_b = mode_struct.mx(b);
-        my_b = mode_struct.my(b);
-        phi_b = mode_struct.phi(b);
-
-        mx_k = mx_a + mx_b;
-        my_k = my_a + my_b;
-
-        col_k = local_mode_to_index(mx_k, nx);
-        row_k = local_mode_to_index(my_k, ny);
-        kmag_k = Kmag(row_k, col_k);
-        kmag_a = mode_struct.kmag(a);
-        kmag_b = mode_struct.kmag(b);
-
-        b_val = local_kernel_B(kmag_k, kmag_a, kmag_b);
-        delta_phi_hat(row_k, col_k) = delta_phi_hat(row_k, col_k) + 2 * b_val * zeta_a * phi_b;
+        dest = double(plan.dest_idx(a, b));
+        delta_phi_hat(dest) = delta_phi_hat(dest) + 2 * plan.Bphi(a, b) * zeta_a * phi_active(b);
     end
 end
 end
 
-function delta_zeta_hat = local_legacy_lambda_rhs(zeta_hat, active_mask, Kmag, KX, KY, kx, mx, ny, nx, cfg)
+function [zeta_next, phi_next] = local_take_fixed_lambda_step(zeta_state, phi_state, h_lambda, plan, Kmag, KX, KY, kx, mx, ny, nx, cfg)
+if strcmpi(cfg.lambda_flow_model, 'canonical_pair')
+    [k1z, k1p] = local_coupled_lambda_rhs(zeta_state, phi_state, plan, ny, nx);
+    [k2z, k2p] = local_coupled_lambda_rhs( ...
+        zeta_state + 0.5 * h_lambda * k1z, ...
+        phi_state + 0.5 * h_lambda * k1p, ...
+        plan, ny, nx);
+    [k3z, k3p] = local_coupled_lambda_rhs( ...
+        zeta_state + 0.5 * h_lambda * k2z, ...
+        phi_state + 0.5 * h_lambda * k2p, ...
+        plan, ny, nx);
+    [k4z, k4p] = local_coupled_lambda_rhs( ...
+        zeta_state + h_lambda * k3z, ...
+        phi_state + h_lambda * k3p, ...
+        plan, ny, nx);
+
+    zeta_next = zeta_state + (h_lambda / 6) * (k1z + 2*k2z + 2*k3z + k4z);
+    phi_next = phi_state + (h_lambda / 6) * (k1p + 2*k2p + 2*k3p + k4p);
+else
+    k1z = local_legacy_lambda_rhs(zeta_state, plan, Kmag, KX, KY, cfg);
+    k2z = local_legacy_lambda_rhs(zeta_state + 0.5 * h_lambda * k1z, plan, Kmag, KX, KY, cfg);
+    k3z = local_legacy_lambda_rhs(zeta_state + 0.5 * h_lambda * k2z, plan, Kmag, KX, KY, cfg);
+    k4z = local_legacy_lambda_rhs(zeta_state + h_lambda * k3z, plan, Kmag, KX, KY, cfg);
+    zeta_next = zeta_state + (h_lambda / 6) * (k1z + 2*k2z + 2*k3z + k4z);
+    phi_next = local_linear_phi_from_eta(zeta_next, Kmag, KX, KY, cfg.g, cfg.propagation_direction_deg);
+end
+end
+
+function [zeta_final, phi_final] = local_adaptive_lambda_flow(zeta_state, phi_state, plan, Kmag, KX, KY, kx, mx, ny, nx, cfg)
+lambda_curr = 1;
+if isempty(cfg.lambda_initial_step)
+    h = min(cfg.lambda_max_step, max(cfg.lambda_min_step, 1 / cfg.n_lambda_steps));
+else
+    h = min(cfg.lambda_max_step, max(cfg.lambda_min_step, abs(cfg.lambda_initial_step)));
+end
+
+while lambda_curr > 0
+    h = min(h, lambda_curr);
+    h_step = -h;
+
+    [zeta_full, phi_full] = local_take_fixed_lambda_step( ...
+        zeta_state, phi_state, h_step, plan, Kmag, KX, KY, kx, mx, ny, nx, cfg);
+
+    [zeta_half, phi_half] = local_take_fixed_lambda_step( ...
+        zeta_state, phi_state, 0.5 * h_step, plan, Kmag, KX, KY, kx, mx, ny, nx, cfg);
+    [zeta_half2, phi_half2] = local_take_fixed_lambda_step( ...
+        zeta_half, phi_half, 0.5 * h_step, plan, Kmag, KX, KY, kx, mx, ny, nx, cfg);
+
+    err = local_relative_pair_error(zeta_full, phi_full, zeta_half2, phi_half2, cfg.lambda_atol, cfg.lambda_rtol);
+    if err <= 1
+        zeta_state = zeta_half2;
+        phi_state = phi_half2;
+        lambda_curr = lambda_curr - h;
+        if ~cfg.preserve_mean
+            zeta_state(1,1) = 0;
+            phi_state(1,1) = 0;
+        end
+        if err > 0
+            h = min(cfg.lambda_max_step, max(cfg.lambda_min_step, 0.9 * h * err^(-0.2)));
+        else
+            h = min(cfg.lambda_max_step, 2.0 * h);
+        end
+    else
+        h = max(cfg.lambda_min_step, 0.9 * h * err^(-0.2));
+        if h <= cfg.lambda_min_step + eps
+            zeta_state = zeta_half2;
+            phi_state = phi_half2;
+            lambda_curr = lambda_curr - h;
+        end
+    end
+end
+
+zeta_final = zeta_state;
+phi_final = phi_state;
+end
+
+function err = local_relative_pair_error(zeta_a, phi_a, zeta_b, phi_b, atol, rtol)
+scale_z = atol + rtol * max(abs(zeta_a), abs(zeta_b));
+scale_p = atol + rtol * max(abs(phi_a), abs(phi_b));
+err_z = max(abs(zeta_a - zeta_b) ./ max(scale_z, eps), [], 'all');
+err_p = max(abs(phi_a - phi_b) ./ max(scale_p, eps), [], 'all');
+err = max(err_z, err_p);
+end
+
+function delta_zeta_hat = local_legacy_lambda_rhs(zeta_hat, plan, Kmag, KX, KY, cfg)
 phi_hat = local_linear_phi_from_eta(zeta_hat, Kmag, KX, KY, cfg.g, cfg.propagation_direction_deg);
-
-[row_idx, col_idx] = find(active_mask);
-active_idx = sub2ind([ny, nx], row_idx, col_idx);
-n_active = numel(active_idx);
-
-mode_struct = struct();
-mode_struct.mx = mx(col_idx).';
-my = [0:(ny/2), (-ny/2 + 1):-1];
-mode_struct.my = my(row_idx).';
-mode_struct.kmag = Kmag(active_idx);
-mode_struct.zeta = zeta_hat(active_idx);
-mode_struct.phi = phi_hat(active_idx);
-
+ny = size(zeta_hat, 1);
+nx = size(zeta_hat, 2);
+n_active = plan.n_active;
+zeta_active = zeta_hat(plan.active_idx);
+phi_active = phi_hat(plan.active_idx);
 delta_zeta_hat = zeros(ny, nx);
 for a = 1:n_active
-    mx_a = mode_struct.mx(a);
-    my_a = mode_struct.my(a);
-    kmag_a = mode_struct.kmag(a);
-    zeta_a = mode_struct.zeta(a);
-    phi_a = mode_struct.phi(a);
+    zeta_a = zeta_active(a);
+    phi_a = phi_active(a);
 
     for b = 1:n_active
-        mx_b = mode_struct.mx(b);
-        my_b = mode_struct.my(b);
-        kmag_b = mode_struct.kmag(b);
-        zeta_b = mode_struct.zeta(b);
-        phi_b = mode_struct.phi(b);
-
-        mx_k = mx_a + mx_b;
-        my_k = my_a + my_b;
-
-        col_k = local_mode_to_index(mx_k, nx);
-        row_k = local_mode_to_index(my_k, ny);
-
-        kmag_k = Kmag(row_k, col_k);
-
-        d_term = 0;
-        if kmag_a > 0 && kmag_b > 0 && abs(phi_a) > 0 && abs(phi_b) > 0
-            d_val = local_kernel_D(kmag_k, kmag_a, kmag_b, cfg.g);
-            d_term = 3 * d_val * phi_a * phi_b;
-        end
-
-        b_val = local_kernel_B(kmag_a, kmag_b, kmag_k);
-        b_term = b_val * zeta_a * zeta_b;
-
-        delta_zeta_hat(row_k, col_k) = delta_zeta_hat(row_k, col_k) - (d_term + b_term);
+        dest = double(plan.dest_idx(a, b));
+        delta_zeta_hat(dest) = delta_zeta_hat(dest) ...
+            - (3 * plan.D(a, b) * phi_a * phi_active(b) + plan.Bz(a, b) * zeta_a * zeta_active(b));
     end
 end
 end
 
-function [dzeta_hat, dphi_hat] = local_coupled_lambda_rhs(zeta_hat, phi_hat, active_mask, Kmag, kx, mx, ny, nx, cfg)
-[row_idx, col_idx] = find(active_mask);
-active_idx = sub2ind([ny, nx], row_idx, col_idx);
-n_active = numel(active_idx);
-
-mode_struct = struct();
-mode_struct.mx = mx(col_idx).';
-my = [0:(ny/2), (-ny/2 + 1):-1];
-mode_struct.my = my(row_idx).';
-mode_struct.kmag = Kmag(active_idx);
-mode_struct.zeta = zeta_hat(active_idx);
-mode_struct.phi = phi_hat(active_idx);
+function [dzeta_hat, dphi_hat] = local_coupled_lambda_rhs(zeta_hat, phi_hat, plan, ny, nx)
+n_active = plan.n_active;
+zeta_active = zeta_hat(plan.active_idx);
+phi_active = phi_hat(plan.active_idx);
 
 dzeta_hat = zeros(ny, nx);
 dphi_hat = zeros(ny, nx);
 
 for a = 1:n_active
-    mx_a = mode_struct.mx(a);
-    my_a = mode_struct.my(a);
-    kmag_a = mode_struct.kmag(a);
-    zeta_a = mode_struct.zeta(a);
-    phi_a = mode_struct.phi(a);
+    zeta_a = zeta_active(a);
+    phi_a = phi_active(a);
 
     for b = 1:n_active
-        mx_b = mode_struct.mx(b);
-        my_b = mode_struct.my(b);
-        kmag_b = mode_struct.kmag(b);
-        zeta_b = mode_struct.zeta(b);
-        phi_b = mode_struct.phi(b);
-
-        mx_k = mx_a + mx_b;
-        my_k = my_a + my_b;
-
-        col_k = local_mode_to_index(mx_k, nx);
-        row_k = local_mode_to_index(my_k, ny);
-        kmag_k = Kmag(row_k, col_k);
-
-        d_term = 0;
-        if kmag_a > 0 && kmag_b > 0 && abs(phi_a) > 0 && abs(phi_b) > 0
-            d_val = local_kernel_D(kmag_k, kmag_a, kmag_b, cfg.g);
-            d_term = 3 * d_val * phi_a * phi_b;
-        end
-
-        b_val_z = local_kernel_B(kmag_a, kmag_b, kmag_k);
-        dzeta_hat(row_k, col_k) = dzeta_hat(row_k, col_k) + d_term + b_val_z * zeta_a * zeta_b;
-
-        b_val_phi = local_kernel_B(kmag_k, kmag_a, kmag_b);
-        dphi_hat(row_k, col_k) = dphi_hat(row_k, col_k) - 2 * b_val_phi * zeta_a * phi_b;
+        dest = double(plan.dest_idx(a, b));
+        dzeta_hat(dest) = dzeta_hat(dest) ...
+            + 3 * plan.D(a, b) * phi_a * phi_active(b) ...
+            + plan.Bz(a, b) * zeta_a * zeta_active(b);
+        dphi_hat(dest) = dphi_hat(dest) - 2 * plan.Bphi(a, b) * zeta_a * phi_active(b);
     end
 end
 end
 
-function [zeta_final, phi_final] = local_backward_picard_316(zeta_bar_hat, phi_bar_hat, active_mask, Kmag, kx, mx, ny, nx, cfg)
-active_idx = find(active_mask(:));
+function [zeta_final, phi_final] = local_backward_picard_316(zeta_bar_hat, phi_bar_hat, active_mask, plan, Kmag, kx, mx, ny, nx, cfg)
+active_idx = plan.active_idx;
 n_active = numel(active_idx);
 n_nodes = cfg.n_lambda_steps + 1;
 h = 1 / cfg.n_lambda_steps;
@@ -438,7 +439,7 @@ for iter = 1:cfg.n_picard_iters
         phi_node(active_idx) = phi_path(:, node);
 
         [rhs_z_full, rhs_p_full] = local_coupled_lambda_rhs( ...
-            zeta_node, phi_node, active_mask, Kmag, kx, mx, ny, nx, cfg);
+            zeta_node, phi_node, plan, ny, nx);
 
         rhs_z_active(:, node) = rhs_z_full(active_idx);
         rhs_p_active(:, node) = rhs_p_full(active_idx);
@@ -471,7 +472,7 @@ for node = 1:(n_nodes - 1)
     phi_node(active_idx) = phi_path(:, node);
 
     [rhs_z_full, rhs_p_full] = local_coupled_lambda_rhs( ...
-        zeta_node, phi_node, active_mask, Kmag, kx, mx, ny, nx, cfg);
+        zeta_node, phi_node, plan, ny, nx);
 
     zeta_final = zeta_final - h * rhs_z_full;
     phi_final = phi_final - h * rhs_p_full;
@@ -479,13 +480,30 @@ end
 end
 
 function [kvec, mvec] = local_fft_wavenumbers(n, d)
+if n == 1
+    mvec = 0;
+    kvec = 0;
+    return;
+end
 L = n * d;
 if mod(n, 2) ~= 0
     error('directional_creamer_transform:EvenGridRequired', ...
         'Current helper assumes an even grid size. Got n=%d.', n);
 end
-mvec = [0:(n/2), (-n/2 + 1):-1];
+mvec = local_fft_mode_numbers(n);
 kvec = (2 * pi / L) * mvec;
+end
+
+function mvec = local_fft_mode_numbers(n)
+if n == 1
+    mvec = 0;
+    return;
+end
+if mod(n, 2) ~= 0
+    error('directional_creamer_transform:EvenGridRequired', ...
+        'Current helper assumes an even grid size. Got n=%d.', n);
+end
+mvec = [0:(n/2), (-n/2 + 1):-1];
 end
 
 function idx = local_mode_to_index(m, n)
