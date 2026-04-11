@@ -14,8 +14,17 @@ diagnostics = cell(1, n_phase);
 
 for idx = 1:n_phase
     eta_phase_shifted(idx, :) = apply_global_phase_shift_1d(eta_lin, x_vec, phase_list(idx));
-    [eta_nl_i, diagnostics{idx}, phi_nl_i] = directional_creamer_transform( ...
-        reshape(eta_phase_shifted(idx, :), 1, []), x_vec, 0, cfg);
+    if isfield(cfg, 'creamer_backend') && strcmpi(cfg.creamer_backend, 'cpp')
+        phase_cfg = cfg;
+        if isfield(cfg, 'cpp_job_dir')
+            phase_cfg.cpp_job_dir = fullfile(cfg.cpp_job_dir, sprintf('phase_%d', idx));
+        end
+        [eta_nl_i, diagnostics{idx}, phi_nl_i] = directional_creamer_transform_cpp( ...
+            reshape(eta_phase_shifted(idx, :), 1, []), x_vec, 0, phase_cfg);
+    else
+        [eta_nl_i, diagnostics{idx}, phi_nl_i] = directional_creamer_transform( ...
+            reshape(eta_phase_shifted(idx, :), 1, []), x_vec, 0, cfg);
+    end
     eta_nl_phase(idx, :) = eta_nl_i;
     phi_nl_phase(idx, :) = phi_nl_i;
     eta2_phase(idx, :) = eta_nl_phase(idx, :) - eta_phase_shifted(idx, :);

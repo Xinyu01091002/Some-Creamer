@@ -11,7 +11,9 @@ MATLAB remains responsible for:
 
 The C++ executable reads a binary job folder, selects active modes, builds
 the canonical-pair interaction plan in-process, runs fixed-step RK4 for the
-lambda-flow, and writes final spectral coefficients.
+lambda-flow, and writes final spectral coefficients. It supports both the
+deep-water Creamer et al. (1989) kernels and the finite-depth Wright &
+Creamer (1994) kernels.
 
 Build:
 
@@ -26,7 +28,7 @@ MATLAB sessions on Windows.
 
 MATLAB bridge functions write:
 - `meta.bin`: int64 `[ny nx n_total n_lambda_steps preserve_mean]`
-- `params.bin`: double `[dx dy g energy_fraction min_active_modes max_active_modes]`
+- `params.bin`: double `[dx dy g energy_fraction min_active_modes max_active_modes depth_h]`
 - `zeta0.bin`, `phi0.bin`: interleaved double complex spectra in MATLAB linear order
 
 The C++ executable now builds these formerly exported plan arrays itself:
@@ -38,3 +40,6 @@ The executable writes:
 - `zeta_final.bin`
 - `phi_final.bin`
 - `summary.txt`
+
+Use `depth_h = Inf` for deep water. Use finite `depth_h` to enable the
+finite-depth `theta(k)=|k|tanh(|k|h)` symbol and finite-depth `B/D` kernels.

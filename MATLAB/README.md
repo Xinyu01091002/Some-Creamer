@@ -43,18 +43,24 @@ This remains the main closure assumption in the current implementation and shoul
   - `canonical_pair`
   - `legacy_zeta_only`
   - `backward_picard_316`
+- `directional_creamer_transform.m` now supports optional finite depth via `cfg.depth_h`.
+  - unset or `inf`: original deep-water Creamer et al. 1989 kernels
+  - finite value: Wright & Creamer 1994 `theta(k)=|k| tanh(|k|h)` and finite-depth `B/D` kernels
 - The active-mode truncation and lambda-step count are currently the two most important numerical knobs for third-order agreement.
 - In current testing:
   - second-order `eta` and `phi` comparisons are already fairly good
   - third-order `eta33` is much more sensitive to active-mode count than to small changes in lambda-step count
+  - unidirectional finite-depth `eta20/eta22` at `k_p h = 2` agrees closely with live MF12 for the baseline focused-wave case
 
 ## C++ Backend
 
 - The C++ source lives in `../cpp/creamer_flow/`.
 - MATLAB still prepares spectra, runs four-phase separation, compares against MF12, and plots.
 - C++ now selects active modes and builds the canonical-pair interaction plan internally from compact binary job files, instead of requiring MATLAB to export `dest_idx`, `Bz`, `Bphi`, and `D`.
+- The C++ backend supports both deep-water and finite-depth kernels through the same `cfg.depth_h` convention as the MATLAB core.
 - The directional `eta33` runner can select this backend with `creamer_backend = 'cpp'`.
 - Standard FFTW was not found on PATH during the current setup check; C++ therefore still receives spectral inputs from MATLAB rather than performing FFTs itself.
 - A current wide-spreading stress test with `Akp=0.18`, `alpha=8`, `spread=30`, `N_lambda=6`, and `8000` active modes finished in about `204.7 s` for four phases.
 - In that case, off-center `eta33` moved closer to MF12 when increasing from `6000` to `8000` modes, but centerline `eta33` slightly overshot MF12.
 - On the current 16 GB workstation, treat `8000-10000` active modes as the practical range for this full-pair-kernel implementation.
+- In finite-depth unidirectional tests, weak-steepness `eta33` ratios were nearly constant with `Akp` but changed strongly with `k_p h`, suggesting a structural depth dependence in the current H3-removal-only reconstruction.

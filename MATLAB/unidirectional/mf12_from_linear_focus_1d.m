@@ -60,12 +60,20 @@ ky = zeros(size(kx));
 
 c1 = mf12_spectral_coefficients(1, cfg.g, cfg.h, a, b, kx, ky, cfg.Ux, cfg.Uy);
 c2 = mf12_spectral_coefficients(2, cfg.g, cfg.h, a, b, kx, ky, cfg.Ux, cfg.Uy);
-c3 = mf12_spectral_coefficients(3, cfg.g, cfg.h, a, b, kx, ky, cfg.Ux, cfg.Uy);
+if cfg.max_order >= 3
+    c3 = mf12_spectral_coefficients(3, cfg.g, cfg.h, a, b, kx, ky, cfg.Ux, cfg.Uy);
+else
+    c3 = [];
+end
 
 eta1 = local_eta_component_1d('first', c1, Lx, nx, cfg.t);
 eta20 = local_eta_component_1d('second_sub', c2, Lx, nx, cfg.t);
 eta22 = local_eta_component_1d('second_super', c2, Lx, nx, cfg.t);
-eta33 = local_eta_component_1d('third_super', c3, Lx, nx, cfg.t);
+if cfg.max_order >= 3
+    eta33 = local_eta_component_1d('third_super', c3, Lx, nx, cfg.t);
+else
+    eta33 = zeros(size(eta_lin));
+end
 eta_total_order3 = eta1 + eta20 + eta22 + eta33;
 
 mf12 = struct();
@@ -94,7 +102,8 @@ defaults = struct( ...
     'Uy', 0, ...
     't', 0, ...
     'energy_fraction', 0.9999999999, ...
-    'max_active_modes', inf);
+    'max_active_modes', inf, ...
+    'max_order', 3);
 
 names = fieldnames(defaults);
 for n = 1:numel(names)

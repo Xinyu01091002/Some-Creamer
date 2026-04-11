@@ -352,3 +352,69 @@ All times below are UTC unless noted otherwise.
   - standard FFTW was not found on PATH
   - MATLAB's private FFTW DLLs exist under the MATLAB installation, but the current C++ backend does not link against them
   - if C++ is later promoted to accept physical-space fields directly, use a standard FFTW installation instead of relying on MATLAB-private DLLs
+
+### Finite-depth unidirectional second-order comparison
+
+- Read the Wright & Creamer (1994) finite-depth notes and implemented a MATLAB finite-depth option in the Creamer core.
+- The finite-depth branch uses:
+  - `theta(k)=|k| tanh(|k|h)`
+  - the 1994 finite-depth `D` kernel with both `theta_i` and `|k_i|^2`
+  - the 1994 finite-depth `B` kernel with both `theta_i` and `|k_i|^2`
+- Deep-water regression check:
+  - default deep-water path and explicit `depth_h = inf` matched exactly in a small smoke test
+  - large-depth `h=1500` matched deep water to about `1.3e-7` in the same small setup
+- Added a focused finite-depth unidirectional second-order runner:
+  - [run_unidirectional_finite_depth_eta2_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_finite_depth_eta2_case.m)
+  - [plot_unidirectional_eta2_comparison.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/plot_unidirectional_eta2_comparison.m)
+- Baseline run:
+  - `Akp=0.12`, `alpha=8`, `k_p h=2`, `h=71.6845878136 m`, `N_x=4096`, `N_lambda=12`
+  - output figure: [unidirectional_finite_depth_eta2_alpha8_Akp1200_kph200_Nx4096_mc2500_nl12_canonical_pair.png](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional/unidirectional_finite_depth_eta2_alpha8_Akp1200_kph200_Nx4096_mc2500_nl12_canonical_pair.png)
+  - MF12 runtime `0.299 s`
+  - Creamer four-phase runtime `6.566 s`
+  - MF12 active modes `194`
+  - Creamer active modes `388`
+  - max `|MF12 eta20| = 0.107383`
+  - max `|Creamer eta20| = 0.107336`
+  - max `|MF12 eta22| = 0.30566`
+  - max `|Creamer eta22| = 0.305522`
+
+### Finite-depth C++ Creamer backend
+
+- Extended the standalone C++ Creamer backend to support Wright & Creamer (1994) finite-depth kernels.
+- The C++ job protocol now writes `depth_h` in `params.bin`; `depth_h = Inf` selects the original deep-water branch.
+- Small finite-depth smoke test against the MATLAB finite-depth core:
+  - active modes matched exactly
+  - max `eta` difference `5.55e-17`
+  - max `phi` difference `1.78e-15`
+- Re-ran the unidirectional finite-depth `k_p h=1`, `alpha=1`, `Akp=0.12`, `ppw≈60`, `1000`-mode case with the C++ backend:
+  - output figure: [unidirectional_finite_depth_eta2_eta33_alpha1_Akp1200_kph100_Nx7680_mc1000_nl12_canonical_pair_cpp.png](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional/unidirectional_finite_depth_eta2_eta33_alpha1_Akp1200_kph100_Nx7680_mc1000_nl12_canonical_pair_cpp.png)
+  - Creamer four-phase runtime `3.150 s`
+  - MF12 active modes `453`
+  - Creamer active modes `1000`
+  - max `|MF12 eta20| = 0.418154`
+  - max `|Creamer eta20| = 0.397459`
+  - filtered max `|Creamer eta20| = 0.398554`
+  - max `|MF12 eta22| = 0.665206`
+  - max `|Creamer eta22| = 0.653574`
+  - max `|MF12 eta33| = 0.158374`
+  - max `|Creamer eta33| = 0.107216`
+
+### Finite-depth `eta33` steepness/depth sweep
+
+- Ran a finite-depth C++ sweep with:
+  - `alpha=8`
+  - `ppw≈60`
+  - Creamer active modes forced to `4000`
+  - MF12 input modes capped at `500` to avoid third-order triplet memory blow-up at very small spectral tails
+  - `N_lambda=12`
+- Sweep results for `Creamer eta33 / MF12 eta33`:
+  - `k_p h=1`, `Akp=0.02`: `0.000535854 / 0.005519 ≈ 0.0971`
+  - `k_p h=1`, `Akp=0.04`: `0.00428212 / 0.044152 ≈ 0.0970`
+  - `k_p h=1`, `Akp=0.12`: `0.114817 / 0.195056 ≈ 0.5886`
+  - `k_p h=2`, `Akp=0.02`: `0.000136032 / 0.000732821 ≈ 0.1856`
+  - `k_p h=2`, `Akp=0.04`: `0.0010876 / 0.00586257 ≈ 0.1855`
+  - `k_p h=2`, `Akp=0.12`: `0.0294364 / 0.0377369 ≈ 0.7801`
+- Working interpretation:
+  - at weak steepness, the third-order gap ratio is nearly independent of `Akp`
+  - the same ratio changes strongly with `k_p h`
+  - this supports the hypothesis that finite-depth third-order mismatch is a depth-structure issue in the current `H_3`-removal-only transform, not just a steepness or active-mode truncation issue

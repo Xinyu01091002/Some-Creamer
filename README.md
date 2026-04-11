@@ -108,6 +108,10 @@ This repository is organized around three goals:
   - `canonical_pair`
   - `legacy_zeta_only`
   - `backward_picard_316`
+- The MATLAB Creamer core now also has an optional finite-depth mode based on Wright & Creamer (1994):
+  - `cfg.depth_h = inf` keeps the original deep-water kernels
+  - finite `cfg.depth_h` uses `theta(k)=|k| tanh(|k|h)` and the 1994 finite-depth `B/D` kernels
+- The focused unidirectional finite-depth runner [run_unidirectional_finite_depth_eta2_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_finite_depth_eta2_case.m) compares `eta20/eta22` against live MF12 at `k_p h = 2`.
 - A standalone non-MEX C++ backend now exists in [cpp/creamer_flow](/c:/Research/Some%20Creamer/cpp/creamer_flow) for the expensive canonical-pair lambda-flow.
 - MATLAB still handles data loading, FFT/IFFT reconstruction, MF12 comparison, four-phase separation, and plotting, while C++ now builds the active-mode interaction plan internally and runs the RK4 flow with OpenMP support.
 - Present evidence from the directional tests suggests:
@@ -122,6 +126,15 @@ This repository is organized around three goals:
   - four-phase runtime about `204.7 s`
 - Increasing the wide-spreading case from `6000` to `8000` active modes moved the off-center `eta33` result closer to MF12, while the centerline amplitude began to slightly overshoot MF12.
 - With the current full pair-kernel C++ implementation, `8000-10000` active modes is the practical near-term range on the current 16 GB workstation; going much beyond that should use a block/on-the-fly interaction kernel rather than storing all pair arrays.
+- Baseline unidirectional finite-depth result for `Akp=0.12`, `alpha=8`, `k_p h=2`, `N_x=4096`, and `N_lambda=12`:
+  - max `|MF12 eta20| = 0.107383`
+  - max `|Creamer eta20| = 0.107336`
+  - max `|MF12 eta22| = 0.30566`
+  - max `|Creamer eta22| = 0.305522`
+- A finite-depth C++ sweep for `alpha=8`, `ppw≈60`, `4000` Creamer modes, and MF12 capped at `500` input modes suggests a systematic depth dependence in third order:
+  - for `k_p h=1`, `Creamer eta33 / MF12 eta33 ≈ 0.097` at both `Akp=0.02` and `Akp=0.04`
+  - for `k_p h=2`, `Creamer eta33 / MF12 eta33 ≈ 0.186` at both `Akp=0.02` and `Akp=0.04`
+  - this supports treating the finite-depth `eta33` gap as a depth-structure issue rather than only a steepness or active-mode issue
 
 ## Suggested Workflow
 

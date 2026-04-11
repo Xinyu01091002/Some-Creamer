@@ -24,9 +24,10 @@ n_total = nx * ny;
 [ky, ~] = local_fft_wavenumbers(ny, dy);
 [KX, KY] = meshgrid(kx, ky);
 Kmag = hypot(KX, KY);
+Theta = local_theta_symbol(Kmag, cfg.depth_h);
 
 zeta_hat = fft2(eta_lin) / n_total;
-phi_hat = local_linear_phi_from_eta(zeta_hat, Kmag, KX, KY, cfg.g, cfg.propagation_direction_deg);
+phi_hat = local_linear_phi_from_eta(zeta_hat, Theta, KX, KY, cfg.g, cfg.propagation_direction_deg);
 
 if ~cfg.preserve_mean
     zeta_hat(1, 1) = 0;
@@ -70,6 +71,12 @@ diagnostics.active_mode_count = cpp_summary.n_active;
 diagnostics.n_lambda_steps = cfg.n_lambda_steps;
 diagnostics.lambda_flow_model = 'canonical_pair';
 diagnostics.lambda_stepper = 'cpp_fixed_rk4';
+diagnostics.depth_h = cfg.depth_h;
+if isfinite(cfg.depth_h)
+    diagnostics.depth_model = 'finite_depth_1994_cpp';
+else
+    diagnostics.depth_model = 'deep_water_1989_cpp';
+end
 diagnostics.cpp_wall_s = cpp_wall_s;
 diagnostics.cpp_kernel_runtime_s = cpp_summary.runtime_s;
 diagnostics.cpp_openmp_threads = cpp_summary.openmp_threads;
@@ -89,6 +96,7 @@ defaults = struct( ...
     'min_active_modes', 0, ...
     'max_active_modes', inf, ...
     'n_lambda_steps', 6, ...
+    'depth_h', inf, ...
     'propagation_direction_deg', 0, ...
     'preserve_mean', true, ...
     'cpp_exe', fullfile(pwd, '..', '..', 'cpp', 'creamer_flow', 'build', 'creamer_flow_plan.exe'), ...
@@ -106,7 +114,7 @@ n_total = nx * ny;
 local_write_int64(fullfile(job_dir, 'meta.bin'), ...
     int64([ny nx n_total cfg.n_lambda_steps double(cfg.preserve_mean)]));
 local_write_double(fullfile(job_dir, 'params.bin'), ...
-    [dx dy cfg.g cfg.energy_fraction cfg.min_active_modes cfg.max_active_modes]);
+    [dx dy cfg.g cfg.energy_fraction cfg.min_active_modes cfg.max_active_modes cfg.depth_h]);
 local_write_complex(fullfile(job_dir, 'zeta0.bin'), zeta_hat(:));
 local_write_complex(fullfile(job_dir, 'phi0.bin'), phi_hat(:));
 end
@@ -155,7 +163,16 @@ else
 end
 end
 
-function phi_hat = local_linear_phi_from_eta(zeta_hat, Kmag, KX, KY, g, propagation_direction_deg)
+function theta = local_theta_symbol(Kmag, depth_h)
+if isfinite(depth_h)
+    theta = Kmag .* tanh(Kmag * depth_h);
+else
+    theta = Kmag;
+end
+theta(Kmag == 0) = 0;
+end
+
+function phi_hat = local_linear_phi_from_eta(zeta_hat, Theta, KX, KY, g, propagation_direction_deg)
 phi_hat = zeros(size(zeta_hat));
 dir_vec = [cosd(propagation_direction_deg), sind(propagation_direction_deg)];
 selector = KX * dir_vec(1) + KY * dir_vec(2);
@@ -164,9 +181,9 @@ positive_mask = selector > eps_dir;
 tie_mask = abs(selector) <= eps_dir;
 positive_mask = positive_mask | (tie_mask & (KY > eps_dir));
 positive_mask = positive_mask | (tie_mask & abs(KY) <= eps_dir & KX > eps_dir);
-nonzero_mask = Kmag > 0;
+nonzero_mask = Theta > 0;
 positive_mask = positive_mask & nonzero_mask;
-phi_hat(positive_mask) = -1i * sqrt(g ./ Kmag(positive_mask)) .* zeta_hat(positive_mask);
+phi_hat(positive_mask) = -1i * sqrt(g ./ Theta(positive_mask)) .* zeta_hat(positive_mask);
 
 [rows, cols] = find(positive_mask);
 for n = 1:numel(rows)

@@ -72,6 +72,7 @@ struct Plan {
     double energy_fraction = 0.99;
     double min_active_modes = 0.0;
     double max_active_modes = 0.0;
+    double depth_h = INFINITY;
     std::vector<std::int64_t> active;
     std::vector<std::int64_t> dest;
     std::vector<double> bz;
@@ -80,7 +81,7 @@ struct Plan {
     std::vector<std::int64_t> order;
 };
 
-double kernel_d(double theta1, double theta2, double theta3, double g) {
+double kernel_d_deep(double theta1, double theta2, double theta3, double g) {
     const double den_base = theta1 * (theta2 + theta3 - theta1)
                           + theta2 * (theta1 + theta3 - theta2)
                           + theta3 * (theta1 + theta2 - theta3);
@@ -94,13 +95,40 @@ double kernel_d(double theta1, double theta2, double theta3, double g) {
     return num / (12.0 * g * den_base);
 }
 
-double kernel_b(double theta1, double theta2, double theta3) {
+double kernel_b_deep(double theta1, double theta2, double theta3) {
     const double den_base = theta1 * (theta2 + theta3 - theta1)
                           + theta2 * (theta1 + theta3 - theta2)
                           + theta3 * (theta1 + theta2 - theta3);
     if (std::abs(den_base) < 1e-14) return 0.0;
     const double num = (theta1 - theta2) * (theta1 - theta2) * (theta1 + theta2)
                      - theta3 * theta3 * (2.0 * theta3 - theta1 - theta2);
+    return num / (2.0 * den_base);
+}
+
+double kernel_d_finite(double theta1, double theta2, double theta3,
+                       double k1sq, double k2sq, double k3sq, double g) {
+    const double den_base = theta1 * (theta2 + theta3 - theta1)
+                          + theta2 * (theta1 + theta3 - theta2)
+                          + theta3 * (theta1 + theta2 - theta3);
+    if (std::abs(den_base) < 1e-14 || theta1 == 0.0 || theta2 == 0.0 || theta3 == 0.0) {
+        return 0.0;
+    }
+    const double num = k1sq * (theta1 * theta1 - (theta2 - theta3) * (theta2 - theta3))
+                     + k2sq * (theta2 * theta2 - (theta1 - theta3) * (theta1 - theta3))
+                     + k3sq * (theta3 * theta3 - (theta1 - theta2) * (theta1 - theta2))
+                     - 2.0 * theta1 * theta2 * theta3 * (theta1 + theta2 + theta3);
+    return num / (12.0 * g * den_base);
+}
+
+double kernel_b_finite(double theta1, double theta2, double theta3,
+                       double k1sq, double k2sq, double k3sq) {
+    const double den_base = theta1 * (theta2 + theta3 - theta1)
+                          + theta2 * (theta1 + theta3 - theta2)
+                          + theta3 * (theta1 + theta2 - theta3);
+    if (std::abs(den_base) < 1e-14) return 0.0;
+    const double num = theta3 * (theta3 * (theta1 + theta2) - theta1 * theta1 - theta2 * theta2)
+                     + theta3 * (k1sq + k2sq - 2.0 * k3sq)
+                     + (theta1 - theta2) * (k1sq - k2sq);
     return num / (2.0 * den_base);
 }
 
@@ -134,6 +162,16 @@ std::vector<double> build_kmag(std::int64_t ny, std::int64_t nx, double dy, doub
         }
     }
     return kmag;
+}
+
+std::vector<double> build_theta(const std::vector<double>& kmag, double depth_h) {
+    std::vector<double> theta(kmag.size(), 0.0);
+    if (std::isfinite(depth_h)) {
+        for (std::size_t i = 0; i < kmag.size(); ++i) theta[i] = kmag[i] * std::tanh(kmag[i] * depth_h);
+    } else {
+        theta = kmag;
+    }
+    return theta;
 }
 
 void build_active_modes(Plan& p, const std::vector<cdouble>& zeta) {
@@ -185,7 +223,7 @@ void build_active_modes(Plan& p, const std::vector<cdouble>& zeta) {
     p.n_active = static_cast<std::int64_t>(p.active.size());
 }
 
-void build_interaction_plan(Plan& p, const std::vector<double>& kmag) {
+void build_interaction_plan(Plan& p, const std::vector<double>& kmag, const std::vector<double>& theta) {
     const std::size_t na = static_cast<std::size_t>(p.n_active);
     const std::size_t npair = na * na;
     p.dest.assign(npair, 0);
@@ -195,6 +233,7 @@ void build_interaction_plan(Plan& p, const std::vector<double>& kmag) {
 
     std::vector<std::int64_t> mx(na), my(na);
     std::vector<double> active_kmag(na, 0.0);
+    std::vector<double> active_theta(na, 0.0);
     for (std::size_t a = 0; a < na; ++a) {
         const std::int64_t idx = p.active[a];
         const std::int64_t row = idx % p.ny;
@@ -202,8 +241,10 @@ void build_interaction_plan(Plan& p, const std::vector<double>& kmag) {
         mx[a] = fft_mode_number(col, p.nx);
         my[a] = fft_mode_number(row, p.ny);
         active_kmag[a] = kmag[static_cast<std::size_t>(idx)];
+        active_theta[a] = theta[static_cast<std::size_t>(idx)];
     }
 
+    const bool finite_depth = std::isfinite(p.depth_h);
 #pragma omp parallel for schedule(static)
     for (std::int64_t b64 = 0; b64 < p.n_active; ++b64) {
         const std::size_t b = static_cast<std::size_t>(b64);
@@ -213,10 +254,20 @@ void build_interaction_plan(Plan& p, const std::vector<double>& kmag) {
             const std::int64_t row_k = mode_to_index(my[a] + my[b], p.ny);
             const std::int64_t dest = row_k + col_k * p.ny;
             const double kmag_k = kmag[static_cast<std::size_t>(dest)];
+            const double theta_k = theta[static_cast<std::size_t>(dest)];
             p.dest[off] = dest;
-            p.d[off] = kernel_d(kmag_k, active_kmag[a], active_kmag[b], p.g);
-            p.bz[off] = kernel_b(active_kmag[a], active_kmag[b], kmag_k);
-            p.bphi[off] = kernel_b(kmag_k, active_kmag[a], active_kmag[b]);
+            if (finite_depth) {
+                const double ksq_a = active_kmag[a] * active_kmag[a];
+                const double ksq_b = active_kmag[b] * active_kmag[b];
+                const double ksq_k = kmag_k * kmag_k;
+                p.d[off] = kernel_d_finite(theta_k, active_theta[a], active_theta[b], ksq_k, ksq_a, ksq_b, p.g);
+                p.bz[off] = kernel_b_finite(active_theta[a], active_theta[b], theta_k, ksq_a, ksq_b, ksq_k);
+                p.bphi[off] = kernel_b_finite(theta_k, active_theta[a], active_theta[b], ksq_k, ksq_a, ksq_b);
+            } else {
+                p.d[off] = kernel_d_deep(kmag_k, active_kmag[a], active_kmag[b], p.g);
+                p.bz[off] = kernel_b_deep(active_kmag[a], active_kmag[b], kmag_k);
+                p.bphi[off] = kernel_b_deep(kmag_k, active_kmag[a], active_kmag[b]);
+            }
         }
     }
 
@@ -229,7 +280,7 @@ void build_interaction_plan(Plan& p, const std::vector<double>& kmag) {
 
 Plan read_job_metadata(const fs::path& dir) {
     auto meta = read_vector<std::int64_t>(dir / "meta.bin", 5);
-    auto params = read_vector<double>(dir / "params.bin", 6);
+    auto params = read_vector<double>(dir / "params.bin", 7);
     Plan p;
     p.ny = meta[0];
     p.nx = meta[1];
@@ -242,6 +293,7 @@ Plan read_job_metadata(const fs::path& dir) {
     p.energy_fraction = params[3];
     p.min_active_modes = params[4];
     p.max_active_modes = params[5];
+    p.depth_h = params[6];
 
     if (p.n_total <= 0 || p.n_steps <= 0 || p.nx <= 0 || p.ny <= 0 || p.dx <= 0.0 || p.dy <= 0.0) {
         throw std::runtime_error("Invalid metadata in job folder");
@@ -335,9 +387,10 @@ int main(int argc, char** argv) {
         auto zeta = read_complex_vector(dir / "zeta0.bin", n);
         auto phi = read_complex_vector(dir / "phi0.bin", n);
         const auto kmag = build_kmag(p.ny, p.nx, p.dy, p.dx);
+        const auto theta = build_theta(kmag, p.depth_h);
         build_active_modes(p, zeta);
         if (p.n_active <= 0) throw std::runtime_error("No active modes selected");
-        build_interaction_plan(p, kmag);
+        build_interaction_plan(p, kmag, theta);
 
         std::vector<cdouble> k1z(n), k1p(n), k2z(n), k2p(n), k3z(n), k3p(n), k4z(n), k4p(n);
         std::vector<cdouble> tmpz(n), tmpp(n);
@@ -372,6 +425,7 @@ int main(int argc, char** argv) {
         summary << "n_total " << p.n_total << "\n";
         summary << "n_active " << p.n_active << "\n";
         summary << "n_lambda_steps " << p.n_steps << "\n";
+        summary << "depth_h " << p.depth_h << "\n";
 #ifdef CREAMER_HAVE_OPENMP
         summary << "openmp_threads " << omp_get_max_threads() << "\n";
 #else
