@@ -139,7 +139,7 @@ All times below are UTC unless noted otherwise.
 - Confirmed that `wolframscript.exe` is available locally.
 - Added a new [Mathematica](/c:/Research/Some%20Creamer/Mathematica) workspace for symbolic derivations.
 - Added [Mathematica/README.md](/c:/Research/Some%20Creamer/Mathematica/README.md) to define scope and workflow for symbolic work.
-- Added [Mathematica/cream_transform_scratch.wl](/c:/Research/Some%20Creamer/Mathematica/cream_transform_scratch.wl) as a minimal reproducible script.
+- Added [Mathematica/tutorial_1989/cream_transform_scratch.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/cream_transform_scratch.wl) as a minimal reproducible script.
 - Verified that the script runs successfully and currently demonstrates:
   - harmonic generation from a toy horizontal remapping
   - the finite-depth operator symbol `k tanh(kh)`
@@ -166,12 +166,12 @@ All times below are UTC unless noted otherwise.
   - one-dimensional Hilbert-transform geometry
   - reconstruction to `(4.13)`
 - Added numbered Wolfram Language scripts:
-  - [Mathematica/00_notation_and_assumptions.wl](/c:/Research/Some%20Creamer/Mathematica/00_notation_and_assumptions.wl)
-  - [Mathematica/01_hamiltonian_toy_model.wl](/c:/Research/Some%20Creamer/Mathematica/01_hamiltonian_toy_model.wl)
-  - [Mathematica/02_poisson_and_lie_tools.wl](/c:/Research/Some%20Creamer/Mathematica/02_poisson_and_lie_tools.wl)
-  - [Mathematica/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/03_global_to_lie_bridge.wl)
-  - [Mathematica/04_1d_hilbert_remap.wl](/c:/Research/Some%20Creamer/Mathematica/04_1d_hilbert_remap.wl)
-  - [Mathematica/05_reconstruct_4_13.wl](/c:/Research/Some%20Creamer/Mathematica/05_reconstruct_4_13.wl)
+  - [Mathematica/tutorial_1989/00_notation_and_assumptions.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/00_notation_and_assumptions.wl)
+  - [Mathematica/tutorial_1989/01_hamiltonian_toy_model.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/01_hamiltonian_toy_model.wl)
+  - [Mathematica/tutorial_1989/02_poisson_and_lie_tools.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/02_poisson_and_lie_tools.wl)
+  - [Mathematica/tutorial_1989/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/03_global_to_lie_bridge.wl)
+  - [Mathematica/tutorial_1989/04_1d_hilbert_remap.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/04_1d_hilbert_remap.wl)
+  - [Mathematica/tutorial_1989/05_reconstruct_4_13.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/05_reconstruct_4_13.wl)
 - The scripts were designed to stay honest about scope:
   - use toy Hamiltonian and finite-dimensional canonical analogues where appropriate
   - mark the periodic Fourier reconstruction as a pedagogical adaptation of `(4.14a)`

@@ -60,7 +60,7 @@ The project-level picture is:
 
 ### Mathematica task
 
-Run [Mathematica/00_notation_and_assumptions.wl](/c:/Research/Some%20Creamer/Mathematica/00_notation_and_assumptions.wl) to set the notation and operator conventions used by the rest of the scripts.
+Run [Mathematica/tutorial_1989/00_notation_and_assumptions.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/00_notation_and_assumptions.wl) to set the notation and operator conventions used by the rest of the scripts.
 It also fixes the paper-level meaning of `\theta(k)=|k|`, the deep-water dispersion
 relation `\omega_k^2 = g|k|`, and the 1D Hilbert-transform convention used later.
 
@@ -110,7 +110,7 @@ Conceptually:
 
 ### Mathematica task
 
-Use [Mathematica/01_hamiltonian_toy_model.wl](/c:/Research/Some%20Creamer/Mathematica/01_hamiltonian_toy_model.wl), which now stays at the paper level and explains:
+Use [Mathematica/tutorial_1989/01_hamiltonian_toy_model.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/01_hamiltonian_toy_model.wl), which now stays at the paper level and explains:
 
 - why the full Hamiltonian in `(2.9)` is nonlinear
 - why it can be expanded as `H = H_2 + H_3 + H_4 + ...`
@@ -169,7 +169,7 @@ The pedagogical version is:
 
 ### Mathematica task
 
-Run [Mathematica/02_poisson_and_lie_tools.wl](/c:/Research/Some%20Creamer/Mathematica/02_poisson_and_lie_tools.wl), which stays at the paper level and explains:
+Run [Mathematica/tutorial_1989/02_poisson_and_lie_tools.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/02_poisson_and_lie_tools.wl), which stays at the paper level and explains:
 
 - the field-theoretic Poisson bracket `(3.6)`
 - why `(\zeta,\phi_s)` are canonical variables
@@ -248,7 +248,7 @@ Teaching summary:
 
 ### Mathematica task
 
-Run [Mathematica/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/03_global_to_lie_bridge.wl), which now summarizes:
+Run [Mathematica/tutorial_1989/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/03_global_to_lie_bridge.wl), which now summarizes:
 
 - the exact paper-level generating functional `(3.1)`
 - the transformation equations `(3.2)-(3.3)`
@@ -306,7 +306,7 @@ What matters most conceptually is:
 
 ### Mathematica task
 
-Run [Mathematica/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/03_global_to_lie_bridge.wl) as a paper-level summary of:
+Run [Mathematica/tutorial_1989/03_global_to_lie_bridge.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/03_global_to_lie_bridge.wl) as a paper-level summary of:
 
 - the generating functional `(3.1)`
 - the transformation equations `(3.2)-(3.3)`
@@ -364,7 +364,7 @@ The essential interpretation is:
 
 ### Mathematica task
 
-Run [Mathematica/04_1d_hilbert_remap.wl](/c:/Research/Some%20Creamer/Mathematica/04_1d_hilbert_remap.wl). It checks two things:
+Run [Mathematica/tutorial_1989/04_1d_hilbert_remap.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/04_1d_hilbert_remap.wl). It checks two things:
 
 - the Hilbert-transform symbol in Fourier space
 - a remapping-generated harmonic expansion for a single travelling wave
@@ -415,7 +415,7 @@ For stage 1, the main conceptual target is:
 
 ### Mathematica task
 
-Run [Mathematica/05_reconstruct_4_13.wl](/c:/Research/Some%20Creamer/Mathematica/05_reconstruct_4_13.wl). It uses a finite-period pedagogical adaptation of the Fourier reconstruction idea behind `(4.14a)` to compare:
+Run [Mathematica/tutorial_1989/05_reconstruct_4_13.wl](/c:/Research/Some%20Creamer/Mathematica/tutorial_1989/05_reconstruct_4_13.wl). It uses a finite-period pedagogical adaptation of the Fourier reconstruction idea behind `(4.14a)` to compare:
 
 - a linear input profile
 - a reconstructed nonlinear profile generated from the same parent field

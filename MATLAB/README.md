@@ -64,3 +64,24 @@ This remains the main closure assumption in the current implementation and shoul
 - In that case, off-center `eta33` moved closer to MF12 when increasing from `6000` to `8000` modes, but centerline `eta33` slightly overshot MF12.
 - On the current 16 GB workstation, treat `8000-10000` active modes as the practical range for this full-pair-kernel implementation.
 - In finite-depth unidirectional tests, weak-steepness `eta33` ratios were nearly constant with `Akp` but changed strongly with `k_p h`, suggesting a structural depth dependence in the current H3-removal-only reconstruction.
+
+## Finite-Depth Eta33 H3+H4 Check
+
+- `unidirectional/creamer_eta33_h3h4_single_frequency_1d.m` implements the 1D single-frequency/self-interaction third-harmonic correction:
+  - `Creamer(H3)` uses the finite-depth H3-only coefficient from the lambda-flow analysis.
+  - `Creamer(H3+H4)` uses the Stokes/VWA coefficient recovered by absorbing the non-resonant H4 part.
+- `unidirectional/run_unidirectional_finite_depth_eta33_single_frequency_case.m` is the clean regular-wave test. It prints and plots:
+  - `MF12 eta33`
+  - `Creamer(H3) eta33`
+  - `Creamer(H3+H4) eta33`
+- `unidirectional/creamer_eta33_h3h4_triad_1d.m` is the 1D broadband triad prototype:
+  - It uses the finite-depth linear relation `phi_k=-i sqrt(g/theta(k)) eta_k`, `theta(k)=|k| tanh(|k|h)`.
+  - It builds direct `H4` from the `N2` convolution and uses `K4=H4-1/2{H3,W3}` with only non-resonant normal monomials absorbed.
+  - Its single-frequency regression at `k h=2`, `Ak=0.05` matches the Stokes/MF12 third-harmonic bin.
+- `unidirectional/run_unidirectional_finite_depth_eta2_case.m` now reports:
+  - `MF12 eta33`
+  - `Creamer(H3) triad eta33`
+  - `Creamer(H3+H4) triad eta33`
+  - flow-separated and single-frequency/self-interaction eta33 as diagnostics
+- `unidirectional/creamer_eta33_h3h4_triad_1d_cpp.m` calls the standalone C++ backend `cpp/creamer_flow/build/creamer_eta33_triad_1d.exe` for the same targeted eta33 calculation.
+- Performance note: the MATLAB broadband triad helper now uses a targeted eta33 evaluator instead of expanding the full quartic polynomial. On the baseline `Nx=1024`, `k_p h=2` focused case, the MATLAB targeted path takes about 45 s for `max_triad_active_modes=8` and about 173 s for `12`. The C++ targeted backend takes about 0.9 s for `8`, 3.1 s for `32`, and 45 s for `60`; `100` was still too large for a 5 minute smoke-test window on this workstation. The finite-depth eta2 runner defaults to `triad_backend='cpp'` and `max_triad_active_modes=60`.
