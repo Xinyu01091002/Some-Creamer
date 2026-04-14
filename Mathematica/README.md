@@ -57,6 +57,65 @@ Use this directory for symbolic work that is awkward to do by hand, especially:
    - a `.nb` notebook for exploratory work
 5. Summarize successful derivations back into the repo notes.
 
+## Sum-Frequency Cross-Term Results
+
+Scripts `20b` and `20c` compute H3-only vs H3+H4 cubic coefficients for
+**sum-frequency triads** (`a > 0, b > 0, c > 0`, output `m = a + b + c`) and compare
+against the MF12 third-order kernel.  Difference-frequency triads are excluded; they
+are physically distinct and require separate treatment.
+
+### Key conclusion: H3+H4 = MF12 exactly at all depths
+
+For every sum-frequency triad tested, H3+H4 reproduces the MF12 coefficient exactly
+at all depths (`kh = 0.5, 1, 2, ∞`):
+
+```
+H3+H4 / MF12 = 1.000  (all sum-frequency triads, all kh)
+```
+
+H3-only undershoots MF12 at finite depth.  The W4 quartic correction closes the gap
+exactly.
+
+### H3+H4 = MF12 getC coefficients
+
+Coefficient convention: `2C` where `eta_nl[m] ~ (C/2) · A1^n1 A2^n2 A3^n3 cos(m x)`.
+
+| Triad       | kh = 0.5 | kh = 1  | kh = 2  | kh → ∞ |
+|-------------|----------|---------|---------|--------|
+| (1,1,1) → 3 | 40.846   | 1.9395  | 0.4672  | 3/8    |
+| (1,1,2) → 4 | 67.891   | 5.8878  | 2.2904  | 2      |
+| (1,2,2) → 5 | 38.726   | 5.8052  | 3.3382  | 25/8   |
+| (2,2,2) → 6 | 7.758    | 1.8688  | 1.5061  | 3/2    |
+| (1,1,3) → 5 | 60.988   | 8.0280  | 3.5453  | 25/8   |
+| (1,2,3) → 6 | 70.433   | 15.224  | 9.5739  | 9      |
+
+Deep-water values are rational and match standard Stokes/VWA results.
+
+### H3-only gap vs MF12
+
+| Triad       | kh = 0.5 H3-only/MF12 | kh = 1  | kh = 2  |
+|-------------|----------------------|---------|---------|
+| (1,1,1) → 3 | 0.753                | 0.913   | 0.997   |
+| (1,1,2) → 4 | 0.790                | 0.948   | 0.998   |
+| (1,2,2) → 5 | 0.851                | 0.979   | 0.999   |
+| (2,2,2) → 6 | 0.914                | 0.997   | 1.000   |
+| (1,1,3) → 5 | 0.810                | 0.955   | 0.998   |
+| (1,2,3) → 6 | 0.880                | 0.983   | 0.999   |
+
+H3-only shortfall is largest at shallow depth and for lower-frequency output modes.
+All ratios → 1 as kh → ∞.
+
+### Scripts
+
+- `20_multi_frequency_cross_terms.wl` — symbolic build on modes `{±1,...,±3}` (Part A)
+  and `{±1,...,±6}` (Part B); Part A completed, Part B exceeds available memory.
+- `20a_cross_terms_mode3.wl` — difference-frequency cross terms at output mode 3
+  (lower priority; bichromatic `{1,2}` input can only reach mode 3 via `(-1,2,2)`).
+- `20b_sum_frequency_extended.wl` — numeric sweep at `kh = 0.5, 1, 2, ∞` on modes
+  `{±1,...,±6}`; produces the coefficient table above.
+- `20c_mf12_sum_frequency_reference.wl` — computes MF12 reference `getC` for the
+  same six triads and prints the `H3+H4 / MF12` ratio table.
+
 ## Suggested First Targets
 
 - Reproduce the small-amplitude harmonic generation from a horizontal remapping.
@@ -121,6 +180,10 @@ wolframscript -file Mathematica\finite_depth\16_frozen_w3_basis_check.wl
 wolframscript -file Mathematica\finite_depth\17_quartic_raw_source_decomposition.wl
 wolframscript -file Mathematica\finite_depth\18_split_nonres_quartic_solve.wl
 wolframscript -file Mathematica\finite_depth\19_quartic_validation_from_frozen_w3.wl
+wolframscript -file Mathematica\finite_depth\20_multi_frequency_cross_terms.wl
+wolframscript -file Mathematica\finite_depth\20a_cross_terms_mode3.wl
+wolframscript -file Mathematica\finite_depth\20b_sum_frequency_extended.wl
+wolframscript -file Mathematica\finite_depth\20c_mf12_sum_frequency_reference.wl
 ```
 
 The `04` script derives:
@@ -167,6 +230,13 @@ The `17` script makes the quartic source explicit before any homological inversi
 The `18` script performs the actual quartic solve in source space.  It projects `S4H4`, `S4W3Induced`, and `S4Raw` onto their non-resonant parts, solves separately for `W4H4` and `W4W3`, defines `W4Total = W4H4 + W4W3`, and checks the three equations `{H2,W4} = -source` first numerically on sampled states and then coefficient-by-coefficient exactly.
 
 The `19` script is the Hamiltonian-first validation pass.  It checks the frozen cubic `W3` identity, the split quartic residuals, the full coordinate map `zeta + {zeta,W3} + 1/2 {{zeta,W3},W3} + {zeta,W4Total}`, the finite-depth single-frequency `C33`, the deep-water limit `3/8`, and a small symmetric broadband toy state.  Its role is to make explicit that the new source decomposition does not replace the accepted `11/12/15` result; it clarifies where that shorthand comes from and separates Hamiltonian consistency from any remaining observable-level broadband issues.
+
+The `20` and `20a`–`20c` scripts are the multi-frequency cross-term suite.  `20` is the
+combined symbolic script (Parts A and B).  `20a` covers difference-frequency output at
+mode 3 (lower priority).  `20b` is the main numeric sweep for sum-frequency triads over
+`kh = 0.5, 1, 2, ∞` on the extended mode set `{±1,...,±6}`.  `20c` computes the MF12
+reference and prints the ratio table; the key result is that all ratios converge to 1
+in the deep-water limit.
 
 ## File Conventions
 

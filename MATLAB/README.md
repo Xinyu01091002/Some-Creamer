@@ -65,6 +65,38 @@ This remains the main closure assumption in the current implementation and shoul
 - On the current 16 GB workstation, treat `8000-10000` active modes as the practical range for this full-pair-kernel implementation.
 - In finite-depth unidirectional tests, weak-steepness `eta33` ratios were nearly constant with `Akp` but changed strongly with `k_p h`, suggesting a structural depth dependence in the current H3-removal-only reconstruction.
 
+## Current Research Focus: Sum-Frequency Multi-Frequency Tests
+
+The next numerical priority for the unidirectional finite-depth `eta33` work is to
+isolate and quantify the **sum-frequency cross-interaction** accuracy of the H3+H4 map.
+
+A sum-frequency interaction is one where all input mode indices are positive
+(e.g. `k1 + k2 → k1+k2`, or `k1 + k1 + k2 → 2k1+k2`).  Difference-frequency
+interactions (involving a negative mode index, e.g. the `(-k1, k2, k2) → 2k2-k1`
+subharmonic structure) are excluded from the current priority and should be treated
+separately once the superharmonic picture is complete.
+
+**Planned numerical checks:**
+
+1. **Bichromatic sum-frequency test**: generate a two-frequency linear wave state
+   with frequencies `k1` and `k2`, run MF12 and both Creamer variants
+   (H3-only, H3+H4), and compare `eta33` at output modes `3k1`, `2k1+k2`,
+   `k1+2k2`, `3k2`.
+   - Vary `k2/k1` ratio (e.g. 1.5, 2, 3) and `kh` (0.5, 1, 2).
+   - Report ratio H3+H4 / MF12 for each sum-frequency output separately.
+
+2. **Gaussian-spectrum sum-frequency check**: for the existing Gaussian test,
+   isolate the spectral bins near `3kp`, `2kp + k_adjacent`, `kp + 2k_adjacent`
+   and compare H3-only vs H3+H4 vs MF12 at those bins specifically.
+
+3. **Sweep across kh**: for a fixed bichromatic input, sweep `kh` from 0.5 to 3
+   and track the H3+H4 / MF12 ratio at the dominant sum-frequency output as a
+   function of depth.
+
+**What to avoid for now**: difference-frequency output modes (subharmonics, set-down,
+infragravity structure).  These are interesting but physically separate and should
+not be mixed into the current sum-frequency accuracy assessment.
+
 ## Finite-Depth Eta33 H3+H4 Check
 
 - `unidirectional/creamer_eta33_h3h4_single_frequency_1d.m` implements the 1D single-frequency/self-interaction third-harmonic correction:

@@ -149,36 +149,59 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
 
 ## Next Technical Targets
 
-1. Build a one-page formula sheet from the 1989 paper.
-2. Write out the cleanest route from transformed variables to `\eta_t`.
-3. Derive surface horizontal and vertical velocities in the reconstructed field.
-4. Compare the meaning of tails in:
-   - `S(\omega)`
-   - `S(k)`
-   - instantaneous reconstructed profiles
-5. Test whether the tail question should be asked in terms of:
-   - propagation
-   - phase locking
-   - canonical normal form
-   - observational diagnostics
-6. For finite depth, determine whether improvement should come primarily from:
-   - eliminating higher-order non-resonant Hamiltonian terms
-   - designing a better depth-dependent surface reconstruction map
-   - or some hybrid of the two
-7. Build benchmark tests for `kd > 0.5`:
-   - regular finite-depth Stokes waves
-   - short-wave packets riding on long waves
-   - narrowband random seas
-8. Compare candidate notions of "best":
-   - canonical simplicity
-   - waveform accuracy
-   - statistical Gaussianization of transformed variables
-   - usefulness for numerical initialization
-9. Build a Mathematica-assisted derivation workflow:
-   - reproduce the remapping-generated harmonic expansion
-   - encode finite-depth operator symbols
-   - test how much Lie-transform bookkeeping can be automated cleanly
-   - keep symbolic outputs synced back into markdown notes
+### Immediate: finite-depth multi-frequency sum-frequency cross terms
+
+The current priority is to evaluate the H3+H4 coordinate map on **sum-frequency interactions only**.
+Difference-frequency interactions (e.g. (-1,2,2)→3, (-1,1,3)→3) are excluded for now because
+they represent a physically separate phenomenon (subharmonic/infragravity structure) and their
+large W4 corrections at finite depth require separate treatment.
+
+Sum-frequency interactions are defined as triads (a, b, c) where all inputs have the same sign
+and the output mode is strictly larger than any individual input, i.e.
+`a > 0, b > 0, c > 0` and output mode `m = a + b + c`.  These are the bound superharmonics
+that drive the finite-depth `eta33` gap seen in MF12 comparisons.
+
+**Symbolic targets (Mathematica, extended mode set):**
+
+1. Compute `C(1,1,2→4)`, `C(1,2,2→5)`, `C(2,2,2→6)` for both H3-only and H3+H4 maps.
+   Compare ratios H3+H4 / H3-only across `kh = 0.5, 1, 2` and the deep-water limit.
+
+2. Compute `C(1,1,3→5)`, `C(1,2,3→6)` as trichromatic sum-frequency cross terms.
+
+3. For each sum-frequency coefficient, also compute the MF12 reference value so that
+   the gap (H3+H4 vs MF12) can be quantified directly at the symbolic level.
+
+4. Determine whether H3+H4 moves each sum-frequency coefficient in the correct direction
+   relative to MF12, and by roughly what fraction the remaining gap closes.
+
+**Single-frequency bookkeeping (already established):**
+
+- H3-only at finite depth underpredicts the Stokes `C33` by a known amount
+  (e.g. ratio ≈ 0.912 at kh=1).
+- H3+H4 recovers the Stokes coefficient exactly.
+- This single-frequency gap is one source of the broadband `eta33` shortfall.
+- The sum-frequency cross-term gaps are the next source to quantify.
+
+**Numerical targets (MATLAB/C++):**
+
+5. Run the Gaussian-spectrum `eta33` comparison for a range of `kh` values and
+   report H3-only vs H3+H4 vs MF12 at the spectral peak `3kp` and at sum-frequency
+   sidebands.
+
+6. Run a dedicated bichromatic (two-frequency) test in MATLAB: generate a linear
+   wave state with exactly two active frequencies `k1` and `k2`, and compare
+   MF12 `eta33` against H3-only and H3+H4 for the sum-frequency output modes
+   `2k1+k2`, `k1+2k2`, `3k1`, `3k2`.
+
+### Deferred
+
+- Difference-frequency cross terms and infragravity structure: deferred until sum-frequency
+  picture is complete.
+- Formula sheet for the 1989 paper: deferred.
+- Surface velocity derivation: deferred.
+- Tail-spectrum question (`S(omega)` vs `S(k)` vs geometry): deferred.
+- Statistical Gaussianization question: deferred.
+- Mathematica-assisted broadband derivation workflow beyond current scripts: deferred.
 
 ## Repository Intent
 
