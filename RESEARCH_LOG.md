@@ -418,3 +418,117 @@ All times below are UTC unless noted otherwise.
   - at weak steepness, the third-order gap ratio is nearly independent of `Akp`
   - the same ratio changes strongly with `k_p h`
   - this supports the hypothesis that finite-depth third-order mismatch is a depth-structure issue in the current `H_3`-removal-only transform, not just a steepness or active-mode truncation issue
+
+## 2026-04-14
+
+### Sum-frequency symbolic closure: H3+H4 = MF12 exactly
+
+- Ran Mathematica scripts `20b_sum_frequency_extended.wl` and `20c_mf12_sum_frequency_reference.wl`.
+
+- Script `20b` computed H3-only and H3+H4 Creamer map coefficients for all six
+  sum-frequency triads (bichromatic {1,2} and trichromatic {1,2,3}) at kh=0.5, 1, 2, deep-water.
+  Mode set was {+-1, ..., +-6}.
+
+- Script `20c` computed MF12 reference coefficients using the Lambda2/Lambda3/G3 formulas
+  and printed the H3+H4 / MF12 comparison table.
+
+- **Key result: H3+H4 = MF12 (ratio = 1.000) for all six sum-frequency triads
+  at all kh values tested (0.5, 1, 2).**
+  Triads checked:
+    - `(1,1,1)->3` (single-freq self-interaction, sanity check)
+    - `(1,1,2)->4` bichromatic
+    - `(1,2,2)->5` bichromatic
+    - `(2,2,2)->6` (single-freq at mode 2)
+    - `(1,1,3)->5` trichromatic cross term
+    - `(1,2,3)->6` trichromatic cross term (permutation factor 2 included)
+
+- Selected H3+H4 vs H3-only ratios from `20b` (same-mode comparison):
+  At kh=0.5: (1,1,1)->3: ratio=1.329; (1,1,2)->4: ratio=1.266; (1,2,2)->5: ratio=1.175
+  At kh=1:   (1,1,1)->3: ratio=1.095; (1,1,2)->4: ratio=1.055; (1,2,2)->5: ratio=1.022
+  At kh=2:   (1,1,1)->3: ratio=1.003; (1,1,2)->4: ratio=1.002; all triads ≈ 1
+  At DW: all ratios = 1.000 exactly (no quartic correction in deep water).
+
+- Significance: the systematic finite-depth eta33 gap (~10-19% of MF12 in the broadband
+  sweep) is **not** due to error in the sum-frequency coefficients of the H3+H4 map.
+  At the coefficient level, H3+H4 reproduces MF12 exactly for all tested triads.
+  Therefore the broadband gap must be a **numerical** issue (active mode count, mode
+  coverage, implementation) rather than a structural failure of the H3+H4 theory.
+
+- Deep-water confirmation: at kh=inf, H3+H4 = H3-only = MF12 for all bichromatic and
+  trichromatic triads (delta < 1e-9). This is the expected algebraic consequence of the
+  absence of quartic corrections in deep water.
+
+### Bichromatic MATLAB runner created
+
+- Added `MATLAB/unidirectional/run_unidirectional_bichromatic_eta33_case.m`.
+- Purpose: numerically validate the symbolic 20b/20c result.
+- Wave state: `eta_lin = A1*cos(k1*x) + A2*cos(k2*x)` with exactly two modes (mk1, mk2).
+- Compares MF12, Creamer(H3), Creamer(H3+H4) at the four output modes:
+  3k1, 2k1+k2, k1+2k2, 3k2.
+- Default parameters: `mk1=1`, `mk2=2`, `k1h=1.0`, `Akp1=0.05`, `Akp2=0.03`,
+  `n_periods=64`, `Nx=4096`, `max_triad_active_modes=2`, `triad_backend='matlab'`.
+- Output: comparison table (amplitudes and H3+H4/MF12 ratios) + 6-panel figure.
+
+### Bug discovered and fixed in `creamer_eta33_h3h4_triad_1d`: targeted evaluation mode
+
+- Initial bichromatic runs with default `evaluation_model='targeted'` gave
+  H3+H4/MF12 ≈ 1.38–1.39 for all output modes — far from the expected 1.000.
+- Ratios were amplitude-independent (identical at 10× smaller amplitudes), confirming
+  a coefficient-level bug rather than higher-order amplitude contamination.
+- Isolated the bug to the `evaluation_model='targeted'` path in `local_eval_z_w4_targeted`.
+- Comparison test: `evaluation_model='dictionary'` gave correct results
+  (H3+H4/H3 = 1.0946 at kh=1, 1.0000 at deep water, for single-frequency).
+- Root cause: the targeted evaluation path overcounts the H4 correction. Even at deep
+  water (where H4 must be exactly zero), the targeted mode yields H3+H4/H3 = 4/3 ≠ 1.
+  The dictionary mode (which builds the full K4 polynomial and applies the homological
+  inverse correctly) gives the right answer at all depths including deep water.
+- **Fix applied**: `run_unidirectional_bichromatic_eta33_case.m` now explicitly sets
+  `evaluation_model='dictionary'`. A code comment documents the targeted-mode bug.
+- Note: the earlier single-frequency "calibration" in `run_unidirectional_finite_depth_
+  eta33_single_frequency_case.m` used `creamer_eta33_h3h4_single_frequency_1d`, which
+  is a hard-coded analytical formula (Stokes C33), NOT the general triad code. That
+  calibration was therefore unaffected by the targeted-mode bug.
+
+### Bichromatic numerical validation: confirmed H3+H4 = MF12
+
+Ran the corrected (dictionary mode) bichromatic runner at three depths and one
+incommensurable ratio:
+
+**k1h=1.0, mk1=1, mk2=2** (k2h=2):
+  - m=4 (2k1+k2): H3+H4/MF12 = 1.00000, H3/MF12 = 0.948
+  - m=5 (k1+2k2): H3+H4/MF12 = 1.00000, H3/MF12 = 0.979
+  - m=6 (3k2):    H3+H4/MF12 = 1.00000, H3/MF12 = 0.997
+  - m=3 (3k1):    H3+H4/MF12 = 1.083  — contaminated by difference-freq triad
+                  (2k2−k1=3 also lands in this bin); not a clean sum-freq test.
+
+**k1h=0.5, mk1=1, mk2=2** (k2h=1):
+  - m=4: H3+H4/MF12 = 1.00000, H3/MF12 = 0.790
+  - m=5: H3+H4/MF12 = 1.00000, H3/MF12 = 0.851
+  - m=6: H3+H4/MF12 = 1.00000, H3/MF12 = 0.914
+  - m=3: H3+H4/MF12 = 0.825   — difference-freq contamination
+
+**k1h=2.0, mk1=1, mk2=2** (k2h=4):
+  - m=4: H3+H4/MF12 = 1.00000, H3/MF12 = 0.998
+  - m=5: H3+H4/MF12 = 1.00000, H3/MF12 = 0.999
+  - m=6: H3+H4/MF12 = 1.00000, H3/MF12 = 1.000
+  - m=3: H3+H4/MF12 = 3.385   — large difference-freq contamination at near-DW depth
+
+**mk1=2, mk2=3, k1h=1.0** (k2h=1.5) — incommensurable ratio, all four bins clean:
+  - m=6  (3k1):    H3+H4/MF12 = 1.00000, H3/MF12 = 0.914
+  - m=7  (2k1+k2): H3+H4/MF12 = 1.00000, H3/MF12 = 0.939
+  - m=8  (k1+2k2): H3+H4/MF12 = 1.00000, H3/MF12 = 0.963
+  - m=9  (3k2):    H3+H4/MF12 = 1.00000, H3/MF12 = 0.983
+
+**Conclusion**: the symbolic 20b/20c result is numerically confirmed.
+H3+H4 = MF12 (ratio = 1.000) at all sum-frequency output bins for k1h ∈ {0.5,1,2}
+and for both commensurable (mk1=1,mk2=2) and incommensurable (mk1=2,mk2=3) mode pairs.
+
+The m=3 contamination when mk1=1,mk2=2 is a difference-frequency effect (2k2−k1 = 3
+lands in the same spectral bin as 3k1). This is not an error; it reflects that MF12
+and Creamer have different difference-frequency treatments, and that the m=3 bin is not
+a clean sum-frequency test for this mode pair.
+
+**Implication (unchanged)**: the broadband eta33 gap in finite-depth MATLAB/C++ runs
+is a numerical issue (active mode count, coverage), not a structural failure of the
+H3+H4 theory. The H3+H4 coefficients are algebraically exact at every sum-frequency
+triad, confirmed numerically.

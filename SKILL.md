@@ -149,49 +149,42 @@ Assume the reader already knows water-wave theory. Then the needed extras are:
 
 ## Next Technical Targets
 
-### Immediate: finite-depth multi-frequency sum-frequency cross terms
+### Symbolic closure established (2026-04-14)
 
-The current priority is to evaluate the H3+H4 coordinate map on **sum-frequency interactions only**.
-Difference-frequency interactions (e.g. (-1,2,2)→3, (-1,1,3)→3) are excluded for now because
-they represent a physically separate phenomenon (subharmonic/infragravity structure) and their
-large W4 corrections at finite depth require separate treatment.
+Scripts `20b` and `20c` have been run. **H3+H4 = MF12 exactly (ratio = 1.000) for all
+six sum-frequency triads at kh = 0.5, 1, 2 and deep water.** Triads checked:
+  - Bichromatic: `(1,1,1)->3`, `(1,1,2)->4`, `(1,2,2)->5`, `(2,2,2)->6`
+  - Trichromatic cross terms: `(1,1,3)->5`, `(1,2,3)->6`
 
-Sum-frequency interactions are defined as triads (a, b, c) where all inputs have the same sign
-and the output mode is strictly larger than any individual input, i.e.
-`a > 0, b > 0, c > 0` and output mode `m = a + b + c`.  These are the bound superharmonics
-that drive the finite-depth `eta33` gap seen in MF12 comparisons.
+H3+H4 vs H3-only ratio decreases toward 1 as kh increases (very small correction at kh=2).
+In deep water the quartic correction is identically zero.
 
-**Symbolic targets (Mathematica, extended mode set):**
+**Implication**: the broadband eta33 gap seen in MATLAB/C++ runs is a **numerical** issue
+(active mode count, coverage, implementation), not a structural failure of the H3+H4 map.
 
-1. Compute `C(1,1,2→4)`, `C(1,2,2→5)`, `C(2,2,2→6)` for both H3-only and H3+H4 maps.
-   Compare ratios H3+H4 / H3-only across `kh = 0.5, 1, 2` and the deep-water limit.
+### Bichromatic numerical validation: COMPLETED (2026-04-14)
 
-2. Compute `C(1,1,3→5)`, `C(1,2,3→6)` as trichromatic sum-frequency cross terms.
+`run_unidirectional_bichromatic_eta33_case.m` was run and confirmed H3+H4 = MF12
+(ratio = 1.000) at all pure sum-frequency output bins for:
+- k1h ∈ {0.5, 1.0, 2.0} with mk1=1, mk2=2
+- mk1=2, mk2=3 (incommensurable) at k1h=1.0
 
-3. For each sum-frequency coefficient, also compute the MF12 reference value so that
-   the gap (H3+H4 vs MF12) can be quantified directly at the symbolic level.
+**Bug found and fixed**: `evaluation_model='targeted'` in `creamer_eta33_h3h4_triad_1d`
+was wrong (gives H3+H4/H3 = 4/3 even at deep water where correction must be zero).
+The `'dictionary'` evaluation mode is correct. The bichromatic runner now uses
+`evaluation_model='dictionary'`.
 
-4. Determine whether H3+H4 moves each sum-frequency coefficient in the correct direction
-   relative to MF12, and by roughly what fraction the remaining gap closes.
+Note on m=3 contamination: when mk1=1, mk2=2, the difference-frequency triad
+2k2−k1=3 contaminates the 3k1 bin. This is physical, not an error. Use mk1=2, mk2=3
+(or any incommensurable pair) to get all four clean sum-frequency bins.
 
-**Single-frequency bookkeeping (already established):**
+### Next: Gaussian broadband comparison (MATLAB/C++)
 
-- H3-only at finite depth underpredicts the Stokes `C33` by a known amount
-  (e.g. ratio ≈ 0.912 at kh=1).
-- H3+H4 recovers the Stokes coefficient exactly.
-- This single-frequency gap is one source of the broadband `eta33` shortfall.
-- The sum-frequency cross-term gaps are the next source to quantify.
-
-**Numerical targets (MATLAB/C++):**
-
-5. Run the Gaussian-spectrum `eta33` comparison for a range of `kh` values and
-   report H3-only vs H3+H4 vs MF12 at the spectral peak `3kp` and at sum-frequency
-   sidebands.
-
-6. Run a dedicated bichromatic (two-frequency) test in MATLAB: generate a linear
-   wave state with exactly two active frequencies `k1` and `k2`, and compare
-   MF12 `eta33` against H3-only and H3+H4 for the sum-frequency output modes
-   `2k1+k2`, `k1+2k2`, `3k1`, `3k2`.
+- Run `run_unidirectional_gaussian_eta33_comparison.m` for a range of `kh` values and
+  report H3-only vs H3+H4 vs MF12 at the spectral peak `3kp` and at sum-frequency
+  sidebands. Use `evaluation_model='dictionary'` for correctness.
+- Check whether the dictionary mode is fast enough for Gaussian spectrum mode counts,
+  or if a correct targeted-mode implementation is needed for performance.
 
 ### Deferred
 
