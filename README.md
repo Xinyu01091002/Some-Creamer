@@ -89,7 +89,8 @@ This repository is organized around three goals:
 
 - The current directional MATLAB prototype now supports both `eta` and `phi_s` reconstruction from one linear parent surface `eta(x,y)`.
 - The core routine exposes a nonlinear `phi_s` output in addition to `eta_nl`, and the four-phase separator now extracts:
-  - `eta20`, `eta22`, `eta33`
+  - `eta1_total`, `eta20`, `eta22`, `eta33`
+  - `eta31 = eta1_total - eta_lin` as the odd-fundamental correction diagnostic used in the current deep-water 1D work
   - `phi20`, `phi22`
 - The second-order validation workflow is now connected to the fixed-`Akp` MF12 HDF5 `.mat`:
   - [directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat](/c:/Research/Some%20Creamer/directional_validation_results_mf12_linear_groups_linear_groups_kd50_mc1500_fixakp_20260409_190137.mat)
@@ -98,12 +99,13 @@ This repository is organized around three goals:
   - [run_directional_creamer_phi_case.m](/c:/Research/Some%20Creamer/MATLAB/directional/run_directional_creamer_phi_case.m) for directional second-order `phi20/phi22`
   - [run_directional_creamer_eta33_case.m](/c:/Research/Some%20Creamer/MATLAB/directional/run_directional_creamer_eta33_case.m) for directional third-order `eta33`
   - [run_unidirectional_creamer_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_creamer_case.m) for unidirectional live MF12 vs Creamer `eta20/eta22/eta33`
+  - [run_unidirectional_deepwater_eta31_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_deepwater_eta31_case.m) for deep-water `eta31`/`eta33` diagnostics against broadband VWA
 - The MATLAB workspace is now organized around:
   - [core](/c:/Research/Some%20Creamer/MATLAB/core) for shared Creamer numerics
   - [directional](/c:/Research/Some%20Creamer/MATLAB/directional) for 2D runners
   - [unidirectional](/c:/Research/Some%20Creamer/MATLAB/unidirectional) for the 1D testbed
   - [validation](/c:/Research/Some%20Creamer/MATLAB/validation) for MF12/validation bridges
-  - [output/directional](/c:/Research/Some%20Creamer/MATLAB/output/directional) and [output/unidirectional](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional) for figures
+  - [output/directional](/c:/Research/Some%20Creamer/MATLAB/output/directional), [output/unidirectional](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional), and [output/unidirectional/eta31](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional/eta31) for figures
 - The current `lambda`-flow implementation supports three numerical variants:
   - `canonical_pair`
   - `legacy_zeta_only`
@@ -111,7 +113,16 @@ This repository is organized around three goals:
 - The MATLAB Creamer core now also has an optional finite-depth mode based on Wright & Creamer (1994):
   - `cfg.depth_h = inf` keeps the original deep-water kernels
   - finite `cfg.depth_h` uses `theta(k)=|k| tanh(|k|h)` and the 1994 finite-depth `B/D` kernels
+- The MATLAB and C++ Creamer drivers now also accept an explicit `cfg.kernel_model` override:
+  - `deep_water_1989`
+  - `finite_depth_1994`
+  - this is useful for diagnostic runs that want to report a finite reference `k_p h` while still forcing the deep-water 1989 kernel
 - The focused unidirectional finite-depth runner [run_unidirectional_finite_depth_eta2_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_finite_depth_eta2_case.m) compares `eta20/eta22` against live MF12 at `k_p h = 2`.
+- The new deep-water 1D diagnostic workflow is:
+  - [run_unidirectional_deepwater_eta31_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_deepwater_eta31_case.m)
+  - [plot_unidirectional_eta31_profile.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/plot_unidirectional_eta31_profile.m)
+  - [vwa_broadband_eta33_1d.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/vwa_broadband_eta33_1d.m)
+  - it compares Creamer `eta31`/`eta33` against broadband VWA `eta33` and a phase-modulated VWA `eta31`, with `k/k_p` spectra and `eta31` envelopes saved into `MATLAB/output/unidirectional/eta31`
 - A standalone non-MEX C++ backend now exists in [cpp/creamer_flow](/c:/Research/Some%20Creamer/cpp/creamer_flow) for the expensive canonical-pair lambda-flow.
 - MATLAB still handles data loading, FFT/IFFT reconstruction, MF12 comparison, four-phase separation, and plotting, while C++ now builds the active-mode interaction plan internally and runs the RK4 flow with OpenMP support.
 - Present evidence from the directional tests suggests:
@@ -135,6 +146,12 @@ This repository is organized around three goals:
   - for `k_p h=1`, `Creamer eta33 / MF12 eta33 ≈ 0.097` at both `Akp=0.02` and `Akp=0.04`
   - for `k_p h=2`, `Creamer eta33 / MF12 eta33 ≈ 0.186` at both `Akp=0.02` and `Akp=0.04`
   - this supports treating the finite-depth `eta33` gap as a depth-structure issue rather than only a steepness or active-mode issue
+- A current deep-water `eta31` stress test with `alpha=1`, `Akp=0.12`, `N_x=8192`, `N_lambda=12`, and `2000` forced active modes gave:
+  - max `|Creamer eta31| = 0.0139604`
+  - max `|Creamer eta33| = 0.0362316`
+  - max `|Broadband VWA eta33| = 0.0382958`
+  - max `|Phase-modulated VWA eta31| = 0.0120772`
+  - the `1200 -> 2000` mode increase changed the maxima only slightly, suggesting the deep-water `eta31/eta33` comparison is beginning to stabilize numerically
 
 ## Suggested Workflow
 

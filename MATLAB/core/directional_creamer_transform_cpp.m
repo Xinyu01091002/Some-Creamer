@@ -8,6 +8,7 @@ if nargin < 4 || isempty(cfg)
     cfg = struct();
 end
 cfg = local_defaults(cfg);
+[kernel_model, kernel_depth_h] = local_resolve_kernel_model(cfg);
 
 [ny, nx] = size(eta_lin);
 x_vec = x_vec(:).';
@@ -24,7 +25,7 @@ n_total = nx * ny;
 [ky, ~] = local_fft_wavenumbers(ny, dy);
 [KX, KY] = meshgrid(kx, ky);
 Kmag = hypot(KX, KY);
-Theta = local_theta_symbol(Kmag, cfg.depth_h);
+Theta = local_theta_symbol(Kmag, kernel_model, kernel_depth_h);
 
 zeta_hat = fft2(eta_lin) / n_total;
 phi_hat = local_linear_phi_from_eta(zeta_hat, Theta, KX, KY, cfg.g, cfg.propagation_direction_deg);
@@ -38,7 +39,7 @@ job_dir = char(cfg.cpp_job_dir);
 if ~exist(job_dir, 'dir')
     mkdir(job_dir);
 end
-local_write_job(job_dir, zeta_hat, phi_hat, ny, nx, dx, dy, cfg);
+local_write_job(job_dir, zeta_hat, phi_hat, ny, nx, dx, dy, cfg, kernel_depth_h);
 
 exe = char(cfg.cpp_exe);
 if ~isfile(exe)
@@ -72,7 +73,9 @@ diagnostics.n_lambda_steps = cfg.n_lambda_steps;
 diagnostics.lambda_flow_model = 'canonical_pair';
 diagnostics.lambda_stepper = 'cpp_fixed_rk4';
 diagnostics.depth_h = cfg.depth_h;
-if isfinite(cfg.depth_h)
+diagnostics.kernel_depth_h = kernel_depth_h;
+diagnostics.kernel_model = kernel_model;
+if strcmpi(kernel_model, 'finite_depth_1994')
     diagnostics.depth_model = 'finite_depth_1994_cpp';
 else
     diagnostics.depth_model = 'deep_water_1989_cpp';
@@ -97,6 +100,7 @@ defaults = struct( ...
     'max_active_modes', inf, ...
     'n_lambda_steps', 6, ...
     'depth_h', inf, ...
+    'kernel_model', '', ...
     'propagation_direction_deg', 0, ...
     'preserve_mean', true, ...
     'cpp_exe', fullfile(pwd, '..', '..', 'cpp', 'creamer_flow', 'build', 'creamer_flow_plan.exe'), ...
@@ -109,12 +113,39 @@ for i = 1:numel(names)
 end
 end
 
-function local_write_job(job_dir, zeta_hat, phi_hat, ny, nx, dx, dy, cfg)
+function [kernel_model, kernel_depth_h] = local_resolve_kernel_model(cfg)
+if ~isfield(cfg, 'kernel_model') || isempty(cfg.kernel_model)
+    if isfinite(cfg.depth_h)
+        kernel_model = 'finite_depth_1994';
+    else
+        kernel_model = 'deep_water_1989';
+    end
+else
+    kernel_model = char(cfg.kernel_model);
+end
+
+if strcmpi(kernel_model, 'deep_water_1989')
+    kernel_model = 'deep_water_1989';
+    kernel_depth_h = inf;
+elseif strcmpi(kernel_model, 'finite_depth_1994')
+    if ~isfinite(cfg.depth_h)
+        error('directional_creamer_transform_cpp:FiniteDepthRequired', ...
+            'cfg.depth_h must be finite when cfg.kernel_model is finite_depth_1994.');
+    end
+    kernel_model = 'finite_depth_1994';
+    kernel_depth_h = cfg.depth_h;
+else
+    error('directional_creamer_transform_cpp:UnknownKernelModel', ...
+        'Unknown cfg.kernel_model: %s', kernel_model);
+end
+end
+
+function local_write_job(job_dir, zeta_hat, phi_hat, ny, nx, dx, dy, cfg, kernel_depth_h)
 n_total = nx * ny;
 local_write_int64(fullfile(job_dir, 'meta.bin'), ...
     int64([ny nx n_total cfg.n_lambda_steps double(cfg.preserve_mean)]));
 local_write_double(fullfile(job_dir, 'params.bin'), ...
-    [dx dy cfg.g cfg.energy_fraction cfg.min_active_modes cfg.max_active_modes cfg.depth_h]);
+    [dx dy cfg.g cfg.energy_fraction cfg.min_active_modes cfg.max_active_modes kernel_depth_h]);
 local_write_complex(fullfile(job_dir, 'zeta0.bin'), zeta_hat(:));
 local_write_complex(fullfile(job_dir, 'phi0.bin'), phi_hat(:));
 end
@@ -163,8 +194,8 @@ else
 end
 end
 
-function theta = local_theta_symbol(Kmag, depth_h)
-if isfinite(depth_h)
+function theta = local_theta_symbol(Kmag, kernel_model, depth_h)
+if strcmpi(kernel_model, 'finite_depth_1994')
     theta = Kmag .* tanh(Kmag * depth_h);
 else
     theta = Kmag;

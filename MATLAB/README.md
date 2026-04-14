@@ -19,14 +19,15 @@ This folder contains the current MATLAB prototype workspace for Creamer/MF12 com
   - directional PNG outputs
 - `output/unidirectional/`
   - unidirectional PNG outputs
+  - includes `output/unidirectional/eta31/` for the dedicated deep-water `eta31`/VWA figures
 
 The older files left directly under `MATLAB/` are retained for compatibility, but the subdirectories above are the intended places to work from.
 
 ## Current Scope
 
-- deep water only
+- deep-water and finite-depth kernels
 - directional 2D case plus a lighter unidirectional 1D testbed
-- second-order and exploratory third-order reconstruction
+- second-order and exploratory third-order reconstruction, including a dedicated deep-water `eta31` diagnostic path
 - MF12 comparison connected either through the fixed-`Akp` validation `.mat` or through live MF12 spectral calls
 - a standalone non-MEX C++ backend for the expensive directional canonical-pair lambda-flow
 
@@ -46,6 +47,13 @@ This remains the main closure assumption in the current implementation and shoul
 - `directional_creamer_transform.m` now supports optional finite depth via `cfg.depth_h`.
   - unset or `inf`: original deep-water Creamer et al. 1989 kernels
   - finite value: Wright & Creamer 1994 `theta(k)=|k| tanh(|k|h)` and finite-depth `B/D` kernels
+- `directional_creamer_transform.m` and `directional_creamer_transform_cpp.m` now also accept `cfg.kernel_model`.
+  - `deep_water_1989`: force the original deep-water kernels
+  - `finite_depth_1994`: force the Wright & Creamer finite-depth kernels
+  - this lets a runner report a finite reference `k_p h` while still locking the reconstruction to the deep-water model
+- `creamer_four_phase_separation_1d.m` now returns:
+  - `eta1_total` as the odd-fundamental content recovered from the four phase shifts
+  - `eta31 = eta1_total - eta_lin` as the current odd-fundamental correction diagnostic
 - The active-mode truncation and lambda-step count are currently the two most important numerical knobs for third-order agreement.
 - In current testing:
   - second-order `eta` and `phi` comparisons are already fairly good
@@ -57,13 +65,41 @@ This remains the main closure assumption in the current implementation and shoul
 - The C++ source lives in `../cpp/creamer_flow/`.
 - MATLAB still prepares spectra, runs four-phase separation, compares against MF12, and plots.
 - C++ now selects active modes and builds the canonical-pair interaction plan internally from compact binary job files, instead of requiring MATLAB to export `dest_idx`, `Bz`, `Bphi`, and `D`.
-- The C++ backend supports both deep-water and finite-depth kernels through the same `cfg.depth_h` convention as the MATLAB core.
+- The C++ backend supports both deep-water and finite-depth kernels through the same `cfg.depth_h` convention as the MATLAB core, and now mirrors the explicit `cfg.kernel_model` override.
 - The directional `eta33` runner can select this backend with `creamer_backend = 'cpp'`.
 - Standard FFTW was not found on PATH during the current setup check; C++ therefore still receives spectral inputs from MATLAB rather than performing FFTs itself.
 - A current wide-spreading stress test with `Akp=0.18`, `alpha=8`, `spread=30`, `N_lambda=6`, and `8000` active modes finished in about `204.7 s` for four phases.
 - In that case, off-center `eta33` moved closer to MF12 when increasing from `6000` to `8000` modes, but centerline `eta33` slightly overshot MF12.
 - On the current 16 GB workstation, treat `8000-10000` active modes as the practical range for this full-pair-kernel implementation.
 - In finite-depth unidirectional tests, weak-steepness `eta33` ratios were nearly constant with `Akp` but changed strongly with `k_p h`, suggesting a structural depth dependence in the current H3-removal-only reconstruction.
+
+## Deep-Water Eta31 / VWA Workflow
+
+- `unidirectional/run_unidirectional_deepwater_eta31_case.m` is the current focused 1D deep-water diagnostic runner.
+  - It keeps a finite reporting depth `k_p h(ref)` but explicitly sets `cfg.kernel_model = 'deep_water_1989'`.
+  - It saves figures into `output/unidirectional/eta31/`.
+- `unidirectional/vwa_broadband_eta33_1d.m` bridges to the external VWA project at `C:\Research\VWA\VWA Unidirectinal\Unidirectional` and evaluates broadband `VWA eta33` through `vwa_eval_from_opensource(..., 3)`.
+- `unidirectional/plot_unidirectional_eta31_profile.m` plots:
+  - `eta11` input versus four-phase `eta1` total
+  - `k/k_p` spectra for the linear and odd-fundamental fields
+  - Creamer H3 `eta31` and `eta33`
+  - broadband `VWA eta33`
+  - a phase-modulated `VWA eta31`
+  - `eta31` envelopes for both the Creamer and VWA diagnostics
+- Current representative deep-water runs:
+  - `alpha=8`, `Akp=0.12`, `N_x=8192`, `800` forced modes:
+    - max `|Creamer eta31| = 0.00788142`
+    - max `|Creamer eta33| = 0.0222774`
+    - max `|Broadband VWA eta33| = 0.0238625`
+    - max `|Phase-modulated VWA eta31| = 0.00742579`
+  - `alpha=1`, `Akp=0.12`, `N_x=8192`, `2000` forced modes:
+    - max `|Creamer eta31| = 0.0139604`
+    - max `|Creamer eta33| = 0.0362316`
+    - max `|Broadband VWA eta33| = 0.0382958`
+    - max `|Phase-modulated VWA eta31| = 0.0120772`
+  - Interpretation:
+    - broadening from `alpha=8` to `alpha=1` increases the third-order content noticeably
+    - for the `alpha=1` case, the `1200 -> 2000` mode increase changes the maxima only slightly, so the comparison is starting to look numerically stable
 
 ## Current Research Focus: Sum-Frequency Multi-Frequency Tests
 

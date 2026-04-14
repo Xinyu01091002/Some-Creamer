@@ -77,15 +77,17 @@ title('\eta_{nl} - \eta_{lin}');
 legend({'MF12 total correction', 'Creamer total correction'}, 'Location', 'best');
 
 nexttile;
-plot(x_over_lambda, result.creamer.eta33 - result.mf12.eta33, '--', 'LineWidth', 1.35, 'Color', [0.64 0.08 0.18]);
+plot(x_over_lambda, result.creamer.eta11_lin, '-', 'LineWidth', 2.0, 'Color', [0.00 0.45 0.74]);
 hold on;
-yline(0, ':', 'Color', [0.4 0.4 0.4], 'LineWidth', 0.8);
+plot(x_over_lambda, result.creamer.eta11, '--', 'LineWidth', 1.35, 'Color', [0.85 0.33 0.10]);
+plot(x_over_lambda, result.creamer.eta11 - result.creamer.eta11_lin, ':', 'LineWidth', 1.2, 'Color', [0.50 0.50 0.50]);
+yline(0, ':', 'Color', [0.75 0.75 0.75], 'LineWidth', 0.6);
 grid on;
 xlim(xlim_wave);
 xlabel('x / \lambda_p');
-ylabel('\Delta \eta_{33}');
-title('\eta_{33} residual');
-legend({'Creamer - MF12'}, 'Location', 'best');
+ylabel('\eta');
+title('\eta_{11}: input vs output');
+legend({'\eta_{lin} (input)', '\eta_{11} (Creamer out)', 'difference'}, 'Location', 'best');
 
 sgtitle(sprintf(['Unidirectional Creamer vs MF12 | A k_p = %.3f, \\alpha = %g, N_x = %d, ', ...
     'k_p h = %.3g, ppw = %.2f, modes = %d, min = %d, N_\\lambda = %d, model = %s'], ...

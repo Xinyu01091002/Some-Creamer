@@ -532,3 +532,76 @@ a clean sum-frequency test for this mode pair.
 is a numerical issue (active mode count, coverage), not a structural failure of the
 H3+H4 theory. The H3+H4 coefficients are algebraically exact at every sum-frequency
 triad, confirmed numerically.
+
+### Deep-water `eta31` / broadband VWA workflow added
+
+- Added an explicit kernel-model override to both MATLAB and C++ Creamer drivers:
+  - `cfg.kernel_model = 'deep_water_1989'`
+  - `cfg.kernel_model = 'finite_depth_1994'`
+  - This decouples the kernel choice from the reporting depth and makes it possible
+    to keep a finite reference `k_p h(ref)` while still forcing the 1989 deep-water
+    kernels.
+
+- Extended the 1D four-phase separator [MATLAB/unidirectional/creamer_four_phase_separation_1d.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/creamer_four_phase_separation_1d.m):
+  - added `eta1_total`
+  - added `eta31 = eta1_total - eta_lin`
+  - note: `eta31` is used here as an odd-fundamental correction diagnostic, so in
+    principle it can also contain higher odd orders beyond the strict cubic term
+
+- Added a dedicated deep-water eta31 runner and plotter:
+  - [MATLAB/unidirectional/run_unidirectional_deepwater_eta31_case.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/run_unidirectional_deepwater_eta31_case.m)
+  - [MATLAB/unidirectional/plot_unidirectional_eta31_profile.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/plot_unidirectional_eta31_profile.m)
+  - output folder: [MATLAB/output/unidirectional/eta31](/c:/Research/Some%20Creamer/MATLAB/output/unidirectional/eta31)
+
+- Added a broadband VWA bridge helper:
+  - [MATLAB/unidirectional/vwa_broadband_eta33_1d.m](/c:/Research/Some%20Creamer/MATLAB/unidirectional/vwa_broadband_eta33_1d.m)
+  - it calls the external VWA project at `C:\Research\VWA\VWA Unidirectinal\Unidirectional`
+    through `vwa_eval_from_opensource(eta11, x_vec, h, g, 3)`
+
+- The deep-water eta31 figure now includes:
+  - `eta11` input versus four-phase `eta1` total
+  - `k/k_p` spectra for the odd-fundamental and third-order fields
+  - `Creamer H3 eta31`
+  - `VWA eta31` built as a phase-modulated `-env(eta33)/3`
+  - `Creamer H3 eta33`
+  - broadband `VWA eta33`
+  - `eta31` envelopes for both Creamer and VWA
+
+- Important correction during this work:
+  - an earlier self-only Stokes/VWA reference was initially plotted as though it
+    represented broadband `VWA eta33`
+  - after checking the external VWA code, this was replaced by the actual broadband
+    `vwa_eval_from_opensource(..., 3)` result
+  - the issue was not a trivial real-part / imaginary-part swap; the original
+    self-only reference was missing the broadband cross-triad content entirely
+
+- Representative deep-water results for `Akp=0.12`, `N_x=8192`, `N_lambda=12`:
+  - `alpha=8`, forced modes `800`:
+    - max `|Creamer eta31| = 0.00788142`
+    - max `|Creamer eta33| = 0.0222774`
+    - max `|Broadband VWA eta33| = 0.0238625`
+    - max `|Phase-modulated VWA eta31| = 0.00742579`
+  - `alpha=1`, forced modes `800`:
+    - max `|Creamer eta31| = 0.0127307`
+    - max `|Creamer eta33| = 0.0331154`
+    - max `|Broadband VWA eta33| = 0.0382958`
+    - max `|Phase-modulated VWA eta31| = 0.0110385`
+  - `alpha=1`, forced modes `1200`:
+    - max `|Creamer eta31| = 0.0140949`
+    - max `|Creamer eta33| = 0.0363102`
+    - max `|Broadband VWA eta33| = 0.0382958`
+    - max `|Phase-modulated VWA eta31| = 0.0121034`
+  - `alpha=1`, forced modes `2000`:
+    - max `|Creamer eta31| = 0.0139604`
+    - max `|Creamer eta33| = 0.0362316`
+    - max `|Broadband VWA eta33| = 0.0382958`
+    - max `|Phase-modulated VWA eta31| = 0.0120772`
+
+- Working interpretation from the deep-water eta31 runs:
+  - broadening the packet from `alpha=8` to `alpha=1` makes both `eta31` and `eta33`
+    larger, as expected
+  - once the active-mode floor reaches roughly `1200-2000`, the `alpha=1` maxima
+    move only slightly, suggesting the comparison is beginning to stabilize
+  - the `2000`-mode run also had cleaner imaginary residuals than the `1200`-mode
+    run, so it is currently the best numerical reference among the deep-water eta31
+    cases

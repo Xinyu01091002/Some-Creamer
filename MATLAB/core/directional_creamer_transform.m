@@ -3,10 +3,14 @@ function [eta_nl, diagnostics, phi_nl] = directional_creamer_transform(eta_lin, 
 % Directional Creamer prototype for deep-water and optional finite-depth waves.
 %
 % This implementation uses the general 2D kernels B and D from Creamer et al.
-% (1989), equations (3.4), (3.5), for deep water. When cfg.depth_h is finite,
-% it switches to the finite-depth Wright & Creamer (1994) theta symbol and
-% kernels. The inverse map is implied by solving the Lie-transform equations
-% from lambda = 1 to lambda = 0, truncated at the first non-trivial order:
+% (1989), equations (3.4), (3.5), for deep water. By default the kernel
+% choice follows the historical depth_h convention:
+%   - depth_h = inf   -> deep-water 1989 kernels
+%   - finite depth_h  -> finite-depth Wright & Creamer (1994) kernels
+% cfg.kernel_model can override that inference explicitly and force either
+% 'deep_water_1989' or 'finite_depth_1994'. The inverse map is implied by
+% solving the Lie-transform equations from lambda = 1 to lambda = 0,
+% truncated at the first non-trivial order:
 %
 %   zeta ~= zeta_bar - [ 3 D phi_bar phi_bar + B zeta_bar zeta_bar ].
 %
@@ -42,6 +46,7 @@ if nargin < 4 || isempty(cfg)
 end
 
 cfg = local_apply_defaults(cfg);
+[kernel_model, kernel_depth_h] = local_resolve_kernel_model(cfg);
 
 if ~isvector(x_vec) || ~isvector(y_vec)
     error('directional_creamer_transform:VectorRequired', ...
@@ -77,7 +82,7 @@ n_total = nx * ny;
 [ky, my] = local_fft_wavenumbers(ny, dy);
 [KX, KY] = meshgrid(kx, ky);
 Kmag = hypot(KX, KY);
-Theta = local_theta_symbol(Kmag, cfg.depth_h);
+Theta = local_theta_symbol(Kmag, kernel_model, kernel_depth_h);
 
 zeta_hat = fft2(eta_lin) / n_total;
 phi_bar_hat = local_linear_phi_from_eta(zeta_hat, Theta, KX, KY, cfg.g, cfg.propagation_direction_deg);
@@ -89,7 +94,7 @@ end
 
 active_mask = local_build_active_mask(zeta_hat, cfg.energy_fraction, cfg.min_active_modes, cfg.max_active_modes, cfg.preserve_mean);
 n_active = nnz(active_mask);
-active_plan = local_build_active_plan(active_mask, Kmag, Theta, mx, ny, nx, cfg.g, cfg.plan_chunk_size, cfg.depth_h);
+active_plan = local_build_active_plan(active_mask, Kmag, Theta, mx, ny, nx, cfg.g, cfg.plan_chunk_size, kernel_model, kernel_depth_h);
 
 if cfg.n_lambda_steps <= 0
     delta_zeta_hat = local_inverse_zeta_correction(zeta_hat, phi_bar_hat, active_plan, ny, nx);
@@ -150,6 +155,8 @@ diagnostics.input_mean = mean(eta_lin(:));
 diagnostics.output_mean = mean(eta_nl(:));
 diagnostics.propagation_direction_deg = cfg.propagation_direction_deg;
 diagnostics.depth_h = cfg.depth_h;
+diagnostics.kernel_depth_h = kernel_depth_h;
+diagnostics.kernel_model = kernel_model;
 diagnostics.depth_model = active_plan.depth_model;
 
 if cfg.verbose
@@ -160,7 +167,11 @@ if cfg.verbose
     fprintf('  Lambda RK steps     : %d\n', cfg.n_lambda_steps);
     fprintf('  Lambda flow model   : %s\n', cfg.lambda_flow_model);
     fprintf('  Lambda stepper      : %s\n', cfg.lambda_stepper);
+    fprintf('  Kernel model        : %s\n', diagnostics.kernel_model);
     fprintf('  Depth model         : %s\n', diagnostics.depth_model);
+    if isfinite(cfg.depth_h)
+        fprintf('  Depth input h       : %.6g\n', cfg.depth_h);
+    end
     fprintf('  Energy kept         : %.2f%%\n', 100 * cfg.energy_fraction);
     fprintf('  Max |eta_lin|       : %.6g\n', diagnostics.max_eta_lin);
     fprintf('  Max |eta_nl|        : %.6g\n', diagnostics.max_eta_nl);
@@ -188,6 +199,7 @@ defaults = struct( ...
     'lambda_min_step', 1e-4, ...
     'lambda_max_step', 0.25, ...
     'depth_h', inf, ...
+    'kernel_model', '', ...
     'plan_chunk_size', 128, ...
     'propagation_direction_deg', 0, ...
     'preserve_mean', true, ...
@@ -202,8 +214,35 @@ for n = 1:numel(names)
 end
 end
 
-function theta = local_theta_symbol(Kmag, depth_h)
-if isfinite(depth_h)
+function [kernel_model, kernel_depth_h] = local_resolve_kernel_model(cfg)
+if ~isfield(cfg, 'kernel_model') || isempty(cfg.kernel_model)
+    if isfinite(cfg.depth_h)
+        kernel_model = 'finite_depth_1994';
+    else
+        kernel_model = 'deep_water_1989';
+    end
+else
+    kernel_model = char(cfg.kernel_model);
+end
+
+if strcmpi(kernel_model, 'deep_water_1989')
+    kernel_model = 'deep_water_1989';
+    kernel_depth_h = inf;
+elseif strcmpi(kernel_model, 'finite_depth_1994')
+    if ~isfinite(cfg.depth_h)
+        error('directional_creamer_transform:FiniteDepthRequired', ...
+            'cfg.depth_h must be finite when cfg.kernel_model is finite_depth_1994.');
+    end
+    kernel_model = 'finite_depth_1994';
+    kernel_depth_h = cfg.depth_h;
+else
+    error('directional_creamer_transform:UnknownKernelModel', ...
+        'Unknown cfg.kernel_model: %s', kernel_model);
+end
+end
+
+function theta = local_theta_symbol(Kmag, kernel_model, depth_h)
+if strcmpi(kernel_model, 'finite_depth_1994')
     theta = Kmag .* tanh(Kmag * depth_h);
 else
     theta = Kmag;
@@ -237,13 +276,13 @@ else
 end
 end
 
-function plan = local_build_active_plan(active_mask, Kmag, Theta, mx, ny, nx, g, chunk_size, depth_h)
+function plan = local_build_active_plan(active_mask, Kmag, Theta, mx, ny, nx, g, chunk_size, kernel_model, depth_h)
 [row_idx, col_idx] = find(active_mask);
 active_idx = sub2ind([ny, nx], row_idx, col_idx);
 n_active = numel(active_idx);
 
 my = local_fft_mode_numbers(ny);
-finite_depth = isfinite(depth_h);
+finite_depth = strcmpi(kernel_model, 'finite_depth_1994');
 plan = struct();
 plan.active_idx = active_idx;
 plan.mx = mx(col_idx).';
@@ -253,6 +292,7 @@ plan.theta = Theta(active_idx);
 plan.n_active = n_active;
 plan.chunk_size = max(1, round(chunk_size));
 plan.depth_h = depth_h;
+plan.kernel_model = kernel_model;
 if finite_depth
     plan.depth_model = 'finite_depth_1994';
 else
